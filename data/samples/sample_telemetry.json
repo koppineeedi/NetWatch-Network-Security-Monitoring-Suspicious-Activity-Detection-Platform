@@ -1,0 +1,28 @@
+[
+  {
+    "timestamp": "2026-08-27T14:00:00Z",
+    "source": "TEST_LOG",
+    "source_ip": "192.168.1.100",
+    "source_port": 51200,
+    "dest_ip": "10.0.0.5",
+    "dest_port": 443,
+    "protocol": "HTTPS",
+    "connection_state": "ESTABLISHED",
+    "process_name": "chrome.exe",
+    "bytes_sent": 1420,
+    "bytes_received": 8500
+  },
+  {
+    "timestamp": "2026-08-27T14:01:15Z",
+    "source": "TEST_LOG",
+    "source_ip": "192.168.1.100",
+    "source_port": 51202,
+    "dest_ip": "10.0.0.10",
+    "dest_port": 22,
+    "protocol": "TCP",
+    "connection_state": "ESTABLISHED",
+    "process_name": "ssh.exe",
+    "bytes_sent": 512,
+    "bytes_received": 1024
+  }
+]
