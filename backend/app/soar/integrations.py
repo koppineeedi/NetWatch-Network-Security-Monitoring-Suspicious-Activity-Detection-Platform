@@ -5,6 +5,8 @@ import subprocess
 import psutil
 import requests
 from typing import Dict, Any, Tuple
+from app.soar.drivers.host_isolation import get_host_isolation_driver
+from app.soar.drivers.iam import get_iam_driver
 
 PROTECTED_IPS = {"127.0.0.1", "::1", "localhost", "0.0.0.0"}
 PROTECTED_PROCESS_NAMES = {
@@ -25,7 +27,6 @@ class LocalFirewallIntegration:
         system_os = platform.system()
 
         if system_os == "Windows":
-            # Check Admin rights on Windows
             try:
                 import ctypes
                 is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
@@ -110,27 +111,25 @@ class LocalFirewallIntegration:
 
 class HostIsolationIntegration:
     @staticmethod
-    def isolate_host(target_host: str) -> Tuple[str, Dict[str, Any]]:
+    def isolate_host(target_host: str, parameters: Dict[str, Any] = None) -> Tuple[str, Dict[str, Any]]:
         """
-        Host isolation interface abstraction. Returns NOT_CONFIGURED unless an explicit driver/agent is attached.
+        Delegates to configured pluggable Host Isolation Driver.
         """
-        # Safety check: Never fake host isolation or crash host system unexpectedly
-        enabled = os.getenv("NETWATCH_SOAR_AUTO_ISOLATION_ENABLED", "false").lower() == "true"
-        if not enabled:
-            return "NOT_CONFIGURED", {
-                "message": "Host Isolation driver/integration is not configured on this host.",
-                "target_host": target_host,
-                "status": "NOT_CONFIGURED"
-            }
-
-        return "NOT_CONFIGURED", {"message": "Host Isolation driver not loaded.", "target_host": target_host}
+        driver = get_host_isolation_driver()
+        return driver.isolate_host(target_host, parameters or {})
 
     @staticmethod
-    def restore_host(target_host: str) -> Tuple[str, Dict[str, Any]]:
+    def restore_host(target_host: str, parameters: Dict[str, Any] = None) -> Tuple[str, Dict[str, Any]]:
         """
-        Restores host network connectivity interface abstraction.
+        Delegates to configured pluggable Host Isolation Driver.
         """
-        return "SUCCESS", {"message": f"Host '{target_host}' connectivity restored.", "target_host": target_host}
+        driver = get_host_isolation_driver()
+        return driver.restore_host(target_host, parameters or {})
+
+    @staticmethod
+    def get_status() -> Dict[str, Any]:
+        driver = get_host_isolation_driver()
+        return driver.get_status()
 
 class ProcessControlIntegration:
     @staticmethod
@@ -143,11 +142,9 @@ class ProcessControlIntegration:
         except (ValueError, TypeError):
             return "FAILED", {"error": f"Invalid PID '{target_pid_str}'. PID must be an integer."}
 
-        # Check PID existence
         if not psutil.pid_exists(pid):
             return "FAILED", {"error": f"Process PID {pid} does not exist or has already terminated."}
 
-        # Protect critical system PIDs & NetWatch process
         current_pid = os.getpid()
         if pid in (0, 1, 4, current_pid):
             return "FAILED", {"error": f"Cannot terminate protected system or NetWatch PID {pid}."}
@@ -172,39 +169,29 @@ class ProcessControlIntegration:
 
 class IdentityProviderIntegration:
     @staticmethod
-    def disable_account(username: str) -> Tuple[str, Dict[str, Any]]:
+    def disable_account(username: str, parameters: Dict[str, Any] = None) -> Tuple[str, Dict[str, Any]]:
         """
-        Account management abstraction. Returns NOT_CONFIGURED unless an identity integration (LDAP/AD/IAM) is configured.
+        Delegates to configured pluggable IAM Driver.
         """
-        idp_configured = os.getenv("NETWATCH_IDP_CONFIGURED", "false").lower() == "true"
-        if not idp_configured:
-            return "NOT_CONFIGURED", {
-                "message": f"Identity Provider (AD/LDAP/IAM) integration is not configured for account '{username}'.",
-                "target": username,
-                "status": "NOT_CONFIGURED"
-            }
-        return "SUCCESS", {"username": username, "status": "DISABLED"}
+        driver = get_iam_driver()
+        return driver.disable_account(username, parameters or {})
 
     @staticmethod
-    def enable_account(username: str) -> Tuple[str, Dict[str, Any]]:
+    def enable_account(username: str, parameters: Dict[str, Any] = None) -> Tuple[str, Dict[str, Any]]:
         """
-        Enables user account interface.
+        Delegates to configured pluggable IAM Driver.
         """
-        idp_configured = os.getenv("NETWATCH_IDP_CONFIGURED", "false").lower() == "true"
-        if not idp_configured:
-            return "NOT_CONFIGURED", {
-                "message": f"Identity Provider integration is not configured for account '{username}'.",
-                "target": username,
-                "status": "NOT_CONFIGURED"
-            }
-        return "SUCCESS", {"username": username, "status": "ENABLED"}
+        driver = get_iam_driver()
+        return driver.enable_account(username, parameters or {})
+
+    @staticmethod
+    def get_status() -> Dict[str, Any]:
+        driver = get_iam_driver()
+        return driver.get_status()
 
 class NotificationIntegration:
     @staticmethod
     def notify_analyst(target_channel: str, message: str, details: Dict[str, Any] = None) -> Tuple[str, Dict[str, Any]]:
-        """
-        Dispatches SOAR notification to webhook or SOC notification endpoint.
-        """
         webhook_url = os.getenv("NETWATCH_SOAR_WEBHOOK_URL") or (details.get("webhook_url") if details else None)
         if webhook_url:
             try:
@@ -216,7 +203,6 @@ class NotificationIntegration:
             except Exception as e:
                 return "FAILED", {"error": str(e)}
 
-        # Internal SOC notification log fallback
         return "SUCCESS", {
             "channel": target_channel or "SOC_PANEL",
             "message": message,

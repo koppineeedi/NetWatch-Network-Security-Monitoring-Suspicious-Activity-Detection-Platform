@@ -348,6 +348,26 @@ def get_integrations(
     """
     return SoarManager.get_integrations_status()
 
+@router.get("/integrations/host-isolation/status")
+def get_host_isolation_status(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns detailed configuration and status of the Host Isolation driver.
+    """
+    from app.soar.integrations import HostIsolationIntegration
+    return HostIsolationIntegration.get_status()
+
+@router.get("/integrations/iam/status")
+def get_iam_status(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns detailed configuration and status of the IAM Identity Provider driver.
+    """
+    from app.soar.integrations import IdentityProviderIntegration
+    return IdentityProviderIntegration.get_status()
+
 @router.get("/statistics", response_model=SoarStatisticsResponse)
 def get_statistics(
     db: Session = Depends(get_db),
@@ -357,3 +377,4 @@ def get_statistics(
     Returns aggregated metrics for SOAR dashboard.
     """
     return SoarManager.get_soar_statistics(db)
+
