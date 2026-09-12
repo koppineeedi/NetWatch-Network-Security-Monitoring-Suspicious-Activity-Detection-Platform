@@ -1,7 +1,8 @@
 import React from 'react';
 import {
   LayoutDashboard, Activity, Network, AlertTriangle, ShieldAlert, FileSearch,
-  FileText, Search, Sliders, BarChart3, Share2, GraduationCap, Settings, User, Users
+  FileText, Search, Sliders, BarChart3, Share2, GraduationCap, Settings, User, Users,
+  Globe, Database, Cpu, Layers, Zap, BarChart2, FileCode, Play
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,10 +26,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/port-protocol', label: 'Port & Protocol', icon: Network },
     { path: '/suspicious', label: 'Suspicious Activity', icon: AlertTriangle },
     { path: '/alerts', label: 'Alerts Queue', icon: ShieldAlert, badge: openAlertsCount },
+    { path: '/ueba', label: 'UEBA Analytics', icon: BarChart2 },
+    { path: '/entities', label: 'Entity Explorer', icon: Layers },
+    { path: '/campaigns', label: 'Campaigns', icon: Zap },
+    { path: '/threat-intel', label: 'Threat Intelligence', icon: Globe },
+    { path: '/iocs', label: 'IOC Explorer', icon: Database },
+    { path: '/connectors', label: 'Connectors & Remote', icon: Cpu },
     { path: '/investigations', label: 'Investigations', icon: FileSearch, badge: activeIncidentsCount },
     { path: '/logs', label: 'Log Ingestion', icon: FileText },
     { path: '/ip-analysis', label: 'IP Investigation', icon: Search },
     { path: '/rules', label: 'Detection Rules', icon: Sliders },
+    { path: '/sigma', label: 'Sigma Engine', icon: FileCode },
+    { path: '/sigma/sandbox', label: 'Detection Sandbox', icon: Play },
+    { path: '/soar', label: 'SOAR Dashboard', icon: Zap },
+    { path: '/soar/playbooks', label: 'Playbook Builder', icon: Layers },
+    { path: '/soar/actions', label: 'SOAR Action Log', icon: ShieldAlert },
     { path: '/reports', label: 'SOC Reports', icon: BarChart3 },
     { path: '/topology', label: 'Network Topology', icon: Share2 },
     { path: '/training', label: 'SOC Training', icon: GraduationCap },

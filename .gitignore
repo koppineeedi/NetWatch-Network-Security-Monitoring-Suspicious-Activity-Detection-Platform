@@ -32,6 +32,8 @@ netwatch.db
 .env.local
 
 # Node / React Frontend
+node_modules/
+**/node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
@@ -49,3 +51,6 @@ data/raw/*
 !data/raw/.gitkeep
 data/normalized/*
 !data/normalized/.gitkeep
+
+# Antigravity / Gemini CLI Artifacts
+.gemini/

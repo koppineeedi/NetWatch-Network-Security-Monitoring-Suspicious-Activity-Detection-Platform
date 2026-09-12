@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import engine, Base
 from app.collectors.local_network import local_collector_instance
+from app.collectors.syslog_collector import syslog_collector_instance
 
 from app.api.health import router as health_router
 from app.api.auth import router as auth_router
@@ -19,16 +20,19 @@ from app.api.assets import router as assets_router
 from app.api.logs import router as logs_router
 from app.api.statistics import router as stats_router
 from app.api.audit import router as audit_router
-from app.api.ip import router as ip_router
 from app.api.ws import router as ws_router
+
+from app.api.connectors import router as connectors_router
+from app.api.threat_intel import router as threat_intel_router, ip_router
+from app.api.iocs import router as iocs_router
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="NetWatch - Defensive SOC Platform API",
-    description="Backend REST API & Telemetry Engine for Network Security Monitoring",
-    version="1.0.0"
+    title="NetWatch - Defensive SIEM & SOC Platform API",
+    description="Backend REST API & Telemetry Engine for Network Security Monitoring & Threat Intelligence",
+    version="1.1.0"
 )
 
 # Configurable CORS middleware for production deployment
@@ -60,23 +64,49 @@ app.include_router(audit_router)
 app.include_router(ip_router)
 app.include_router(ws_router)
 
+# Enterprise Cycle 1 Routers
+app.include_router(connectors_router)
+app.include_router(threat_intel_router)
+app.include_router(iocs_router)
+
+# Enterprise Cycle 2 Routers (UEBA & Behavioral Analytics)
+from app.api.ueba import router as ueba_router
+from app.api.entities import router as entities_router
+from app.api.anomalies import router as anomalies_router
+from app.api.campaigns import router as campaigns_router
+
+app.include_router(ueba_router)
+app.include_router(entities_router)
+app.include_router(anomalies_router)
+app.include_router(campaigns_router)
+
+# Enterprise Cycle 3 Routers (Sigma Engine & Sandbox)
+from app.api.sigma import router as sigma_router
+app.include_router(sigma_router)
+
+# Enterprise Cycle 4 Routers (SOAR Subsystem)
+from app.api.soar import router as soar_router
+app.include_router(soar_router)
+
 @app.on_event("startup")
 def startup_event():
-    """Automatically start the real local network telemetry collector on backend launch."""
+    """Automatically start local network telemetry collector and syslog receiver on backend launch."""
     local_collector_instance.start()
+    syslog_collector_instance.start()
 
 @app.on_event("shutdown")
 def shutdown_event():
-    """Ensure collector stops cleanly when backend shuts down."""
+    """Ensure collectors stop cleanly when backend shuts down."""
     local_collector_instance.stop()
+    syslog_collector_instance.stop()
 
 @app.get("/")
 def root():
     return {
         "status": "ONLINE",
-        "system": "NetWatch Defensive SOC Engine",
+        "system": "NetWatch Defensive SIEM/SOC Engine",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.1.0"
     }
 
 if __name__ == "__main__":

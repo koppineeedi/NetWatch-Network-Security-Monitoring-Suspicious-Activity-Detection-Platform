@@ -53,6 +53,76 @@ DEFAULT_RULES = [
         "threshold": 15,  # DNS query events
         "time_window": 60,  # seconds
         "enabled": True
+    },
+    {
+        "rule_code": "R-UEBA-01",
+        "name": "Behavioral Anomaly - Port Scan / Entropy Deviation",
+        "category": "UEBA_ANOMALY",
+        "condition_desc": "Triggered when host destination port entropy deviates beyond 95th percentile baseline.",
+        "severity": "HIGH",
+        "threshold": 3,
+        "time_window": 300,
+        "enabled": True
+    },
+    {
+        "rule_code": "R-UEBA-02",
+        "name": "Behavioral Anomaly - Connection Rate Spike",
+        "category": "UEBA_ANOMALY",
+        "condition_desc": "Triggered when host connection rate deviates beyond 95th percentile baseline.",
+        "severity": "HIGH",
+        "threshold": 3,
+        "time_window": 300,
+        "enabled": True
+    },
+    {
+        "rule_code": "R-UEBA-03",
+        "name": "Behavioral Anomaly - High Failed Connection Ratio",
+        "category": "UEBA_ANOMALY",
+        "condition_desc": "Triggered when failed connection count breaches historical 95th percentile baseline.",
+        "severity": "HIGH",
+        "threshold": 3,
+        "time_window": 300,
+        "enabled": True
+    },
+    {
+        "rule_code": "R-UEBA-04",
+        "name": "Behavioral Anomaly - DNS Tunneling Query Volume",
+        "category": "UEBA_ANOMALY",
+        "condition_desc": "Triggered when DNS query volume breaches historical 95th percentile baseline.",
+        "severity": "HIGH",
+        "threshold": 3,
+        "time_window": 300,
+        "enabled": True
+    },
+    {
+        "rule_code": "R-UEBA-05",
+        "name": "Behavioral Anomaly - Data Exfiltration Payload Spike",
+        "category": "UEBA_ANOMALY",
+        "condition_desc": "Triggered when host data payload size breaches historical 95th percentile baseline.",
+        "severity": "CRITICAL",
+        "threshold": 3,
+        "time_window": 300,
+        "enabled": True
+    },
+    {
+        "rule_code": "R-CORR-01",
+        "name": "Correlated Multi-Stage Threat Pattern",
+        "category": "CORRELATION",
+        "condition_desc": "Triggered when a sequence of port scanning and failed connection anomalies occurs within a sliding window.",
+        "severity": "CRITICAL",
+        "threshold": 2,
+        "time_window": 1800,
+        "enabled": True
+    },
+    {
+        "rule_code": "R-CAMP-01",
+        "name": "Threat Campaign Cluster Triggered",
+        "category": "CAMPAIGN",
+        "condition_desc": "Triggered when multiple correlated anomalies and alerts form an active multi-stage campaign cluster.",
+        "severity": "CRITICAL",
+        "threshold": 1,
+        "time_window": 3600,
+        "enabled": True
     }
 ]
 

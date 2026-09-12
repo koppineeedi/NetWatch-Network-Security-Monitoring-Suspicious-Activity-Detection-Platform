@@ -20,6 +20,7 @@ export const Alerts: React.FC = () => {
   const [selectedAlert, setSelectedAlert] = useState<SecurityAlert | null>(null);
   const [evidenceEvents, setEvidenceEvents] = useState<NetworkEvent[]>([]);
   const [loadingEvidence, setLoadingEvidence] = useState<boolean>(false);
+  const [threatIntel, setThreatIntel] = useState<{ matched: boolean; match?: any } | null>(null);
   const [creatingInv, setCreatingInv] = useState<boolean>(false);
 
   const fetchAlerts = async () => {
@@ -57,11 +58,17 @@ export const Alerts: React.FC = () => {
   const handleOpenDetail = async (alert: SecurityAlert) => {
     setSelectedAlert(alert);
     setLoadingEvidence(true);
+    setThreatIntel(null);
     try {
-      const evts = await apiService.getAlertEvidenceEvents(alert.id);
+      const [evts, ti] = await Promise.all([
+        apiService.getAlertEvidenceEvents(alert.id),
+        apiService.getAlertThreatIntel(alert.id)
+      ]);
       setEvidenceEvents(evts);
+      setThreatIntel(ti);
     } catch {
       setEvidenceEvents([]);
+      setThreatIntel({ matched: false });
     } finally {
       setLoadingEvidence(false);
     }
@@ -243,6 +250,73 @@ export const Alerts: React.FC = () => {
                 Source IP: <span className="text-cyan-400 font-bold">{selectedAlert.source_ip || '127.0.0.1'}</span> &rarr; Target: <span className="text-indigo-300 font-bold">{selectedAlert.dest_ip || 'N/A'}</span> (Port: {selectedAlert.dest_port || 'N/A'})
               </p>
             </div>
+
+            <div>
+              <h4 className="text-slate-200 font-bold mb-1">Threat Intelligence Enrichment</h4>
+              {threatIntel === null ? (
+                <div className="p-3 bg-slate-950 rounded border border-slate-800 text-slate-500">Checking threat intelligence databases...</div>
+              ) : threatIntel.matched && threatIntel.match ? (
+                <div className="p-3 bg-slate-950 rounded border border-rose-500/40 text-slate-200 space-y-1.5 font-mono">
+                  <div className="flex items-center justify-between text-rose-400 font-bold">
+                    <span>IOC Match: {threatIntel.match.ioc_value} ({threatIntel.match.ioc_type})</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">{threatIntel.match.severity}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                    <div>Provider: <span className="text-cyan-300 font-bold">{threatIntel.match.provider}</span></div>
+                    <div>Confidence: <span className="text-emerald-400 font-bold">{threatIntel.match.confidence}%</span></div>
+                    <div>Country: <span className="text-slate-200">{threatIntel.match.country || 'N/A'}</span></div>
+                    <div>ASN: <span className="text-slate-200">{threatIntel.match.asn || 'N/A'}</span></div>
+                    <div className="col-span-2">Organization: <span className="text-slate-200">{threatIntel.match.organization || 'N/A'}</span></div>
+                    <div>First Seen: <span className="text-slate-400">{threatIntel.match.first_seen ? new Date(threatIntel.match.first_seen).toLocaleString() : 'N/A'}</span></div>
+                    <div>Last Seen: <span className="text-slate-400">{threatIntel.match.last_seen ? new Date(threatIntel.match.last_seen).toLocaleString() : 'N/A'}</span></div>
+                  </div>
+                  {threatIntel.match.tags && (
+                    <div className="text-[10px] text-indigo-300">
+                      Tags: {threatIntel.match.tags}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-950 rounded border border-slate-800 text-slate-500 italic">
+                  No threat intelligence match
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h4 className="text-slate-200 font-bold mb-1">Behavioral Analytics & UEBA Context</h4>
+              <div className="p-3 bg-slate-950 rounded border border-cyan-500/30 text-slate-300 space-y-1 font-mono">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-slate-400">Entity Risk Score:</span>
+                  <span className="text-rose-400 font-bold">{selectedAlert.risk_score?.toFixed(1) ?? '0.0'} / 100 (24h Temporal Decay)</span>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  Rule / Model Code: <span className="text-cyan-300 font-bold">{selectedAlert.rule_id || 'BEHAVIORAL_ANOMALY'}</span>
+                </div>
+              </div>
+            </div>
+
+            {selectedAlert.rule_id && (selectedAlert.rule_id.startsWith('SIGMA') || selectedAlert.detection_type.includes('Sigma')) && (
+              <div>
+                <h4 className="text-slate-200 font-bold mb-1 text-indigo-400 flex items-center gap-1.5">
+                  Sigma Detection Context
+                </h4>
+                <div className="p-3 bg-slate-950 rounded border border-indigo-500/40 text-slate-300 space-y-1 font-mono text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Sigma Rule ID:</span>
+                    <span className="text-indigo-300 font-bold">{selectedAlert.rule_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Rule Title:</span>
+                    <span className="text-slate-200">{selectedAlert.detection_type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Evaluation Mode:</span>
+                    <span className="text-emerald-400 font-bold">LIVE PRODUCTION</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <h4 className="text-slate-200 font-bold mb-1">Backend Detection Explanation</h4>

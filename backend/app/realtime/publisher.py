@@ -116,3 +116,151 @@ def publish_telemetry_status(status_dict: Dict[str, Any]):
         "data": status_dict
     }
     _run_async(ws_manager.broadcast(payload))
+
+def publish_anomaly(anomaly):
+    """
+    Publishes newly detected behavioral Anomaly record to connected WebSocket clients.
+    """
+    if not ws_manager.active_connections:
+        return
+
+    payload = {
+        "type": "anomaly_detected",
+        "timestamp": anomaly.timestamp.isoformat() if hasattr(anomaly, 'timestamp') and anomaly.timestamp else datetime.utcnow().isoformat(),
+        "data": {
+            "id": anomaly.id,
+            "entity_id": getattr(anomaly, "entity_id", ""),
+            "entity_type": getattr(anomaly, "entity_type", "IP"),
+            "feature": getattr(anomaly, "feature", ""),
+            "observed_value": getattr(anomaly, "observed_value", 0.0),
+            "baseline_value": getattr(anomaly, "baseline_value", 0.0),
+            "anomaly_score": getattr(anomaly, "anomaly_score", 0.0),
+            "severity": getattr(anomaly, "severity", "MEDIUM"),
+            "explanation": getattr(anomaly, "explanation", ""),
+            "mitre_technique": getattr(anomaly, "mitre_technique", None)
+        }
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_entity_risk(entity):
+    """
+    Publishes updated Entity risk score to connected WebSocket clients.
+    """
+    if not ws_manager.active_connections:
+        return
+
+    payload = {
+        "type": "entity_risk_updated",
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": {
+            "id": entity.id,
+            "entity_id": getattr(entity, "entity_id", ""),
+            "entity_type": getattr(entity, "entity_type", "IP"),
+            "current_risk_score": getattr(entity, "current_risk_score", 0.0),
+            "baseline_status": getattr(entity, "baseline_status", "INSUFFICIENT_DATA"),
+            "anomaly_count": getattr(entity, "anomaly_count", 0),
+            "high_risk_count": getattr(entity, "high_risk_count", 0)
+        }
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_campaign_update(campaign):
+    """
+    Publishes updated Campaign record to connected WebSocket clients.
+    """
+    if not ws_manager.active_connections:
+        return
+
+    payload = {
+        "type": "campaign_updated",
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": {
+            "id": campaign.id,
+            "campaign_id": getattr(campaign, "campaign_id", ""),
+            "name": getattr(campaign, "name", ""),
+            "status": getattr(campaign, "status", "ACTIVE"),
+            "risk_score": getattr(campaign, "risk_score", 0.0),
+            "event_count": getattr(campaign, "event_count", 0),
+            "entity_count": getattr(campaign, "entity_count", 0)
+        }
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_sigma_match(rule_id: str, rule_title: str, severity: str, event_id: int):
+    """Publishes live SIGMA_RULE_MATCHED event to connected WebSocket clients."""
+    if not ws_manager.active_connections:
+        return
+    payload = {
+        "type": "SIGMA_RULE_MATCHED",
+        "timestamp": datetime.utcnow().isoformat(),
+        "rule_id": rule_id,
+        "rule_title": rule_title,
+        "severity": severity,
+        "event_id": event_id
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_sigma_rule_update(rule):
+    """Publishes SIGMA_RULE_UPDATED event to connected WebSocket clients."""
+    if not ws_manager.active_connections:
+        return
+    payload = {
+        "type": "SIGMA_RULE_UPDATED",
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": {
+            "rule_id": getattr(rule, "rule_id", ""),
+            "title": getattr(rule, "title", ""),
+            "version": getattr(rule, "version", 1),
+            "enabled": getattr(rule, "enabled", False)
+        }
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_sigma_rule_enabled(rule):
+    """Publishes SIGMA_RULE_ENABLED event to connected WebSocket clients."""
+    if not ws_manager.active_connections:
+        return
+    payload = {
+        "type": "SIGMA_RULE_ENABLED",
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": {"rule_id": getattr(rule, "rule_id", ""), "title": getattr(rule, "title", "")}
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_sigma_rule_disabled(rule):
+    """Publishes SIGMA_RULE_DISABLED event to connected WebSocket clients."""
+    if not ws_manager.active_connections:
+        return
+    payload = {
+        "type": "SIGMA_RULE_DISABLED",
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": {"rule_id": getattr(rule, "rule_id", ""), "title": getattr(rule, "title", "")}
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_sigma_sandbox_completed(result: Dict[str, Any]):
+    """Publishes SIGMA_SANDBOX_COMPLETED event to connected WebSocket clients."""
+    if not ws_manager.active_connections:
+        return
+    payload = {
+        "type": "SIGMA_SANDBOX_COMPLETED",
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": result
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+def publish_soar_event(event_type: str, data: Dict[str, Any]):
+    """
+    Publishes real-time SOAR events (PLAYBOOK_STARTED, ACTION_COMPLETED, ACTION_APPROVAL_REQUIRED, etc.)
+    to connected WebSocket clients.
+    """
+    if not ws_manager.active_connections:
+        return
+    payload = {
+        "type": event_type,
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": data
+    }
+    _run_async(ws_manager.broadcast(payload))
+
+

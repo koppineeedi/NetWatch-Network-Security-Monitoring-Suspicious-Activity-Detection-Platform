@@ -1,5 +1,7 @@
 import {
-  NetworkEvent, SecurityAlert, Investigation, DetectionRule, Asset, SocStatistics, User
+  NetworkEvent, SecurityAlert, Investigation, DetectionRule, Asset, SocStatistics, User,
+  Connector, ConnectorTestResult, IOC, IOCMatch, IPReputation, IPGeolocation, ThreatIntelStats, ThreatIntelProviderStatus,
+  UEBAStatus, AnalyticsStats, BehaviorBaseline, Entity, EntityRiskHistory, Anomaly, Campaign, CampaignEventDetails
 } from '../types';
 
 const BASE_URL = 'http://127.0.0.1:8000';
@@ -160,7 +162,7 @@ export const apiService = {
     return await handleResponse(res);
   },
 
-  updateUserStatus: async (userId: number, isActive: bool): Promise<User> => {
+  updateUserStatus: async (userId: number, isActive: boolean): Promise<User> => {
     const res = await fetch(`${BASE_URL}/api/users/${userId}/status`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
@@ -295,6 +297,17 @@ export const apiService = {
     return [];
   },
 
+  getAlertThreatIntel: async (alertId: number): Promise<{ matched: boolean; match?: any }> => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/alerts/${alertId}/threat-intel`, {
+        headers: getAuthHeaders(),
+        signal: AbortSignal.timeout(2000)
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    return { matched: false };
+  },
+
   // Investigations
   getInvestigations: async (): Promise<Investigation[]> => {
     try {
@@ -414,13 +427,14 @@ export const apiService = {
     return {
       total_events: 0,
       active_connections: 0,
-      suspicious_events: 0,
-      open_alerts: 0,
-      open_investigations: 0,
       total_detections: 0,
-      monitored_assets: 0,
-      protocol_distribution: [],
-      top_ports: []
+      open_alerts: 0,
+      critical_alerts: 0,
+      high_alerts: 0,
+      medium_alerts: 0,
+      low_alerts: 0,
+      investigations_open: 0,
+      total_assets: 0
     };
   },
 
@@ -483,5 +497,516 @@ export const apiService = {
       if (res.ok) return await res.json();
     } catch {}
     return [];
+  },
+
+  // Enterprise Cycle 1: Connectors API
+  getConnectors: async (): Promise<Connector[]> => {
+    const res = await fetch(`${BASE_URL}/api/connectors`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  createConnector: async (data: { connector_id: string; name: string; connector_type: string; config?: any }): Promise<Connector> => {
+    const res = await fetch(`${BASE_URL}/api/connectors`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  testConnector: async (id: string, config?: any): Promise<ConnectorTestResult> => {
+    const res = await fetch(`${BASE_URL}/api/connectors/${id}/test`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(config || {}),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  enableConnector: async (id: string): Promise<Connector> => {
+    const res = await fetch(`${BASE_URL}/api/connectors/${id}/enable`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  disableConnector: async (id: string): Promise<Connector> => {
+    const res = await fetch(`${BASE_URL}/api/connectors/${id}/disable`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  // Enterprise Cycle 1: Threat Intelligence API
+  getThreatIntelStatus: async (): Promise<ThreatIntelStats> => {
+    const res = await fetch(`${BASE_URL}/api/threat-intelligence/status`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getTIProviders: async (): Promise<ThreatIntelProviderStatus[]> => {
+    const res = await fetch(`${BASE_URL}/api/threat-intelligence/providers`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  testTIProvider: async (name: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/threat-intelligence/providers/${name}/test`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  getIOCs: async (search?: string, ioc_type?: string, source?: string, severity?: string): Promise<IOC[]> => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (ioc_type) params.append('ioc_type', ioc_type);
+    if (source) params.append('source', source);
+    if (severity) params.append('severity', severity);
+
+    const res = await fetch(`${BASE_URL}/api/iocs?${params.toString()}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  createIOC: async (iocData: { ioc_value: string; ioc_type: string; source?: string; confidence?: number; severity?: string; tags?: string }): Promise<IOC> => {
+    const res = await fetch(`${BASE_URL}/api/iocs`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(iocData),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  deleteIOC: async (id: number): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/iocs/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  uploadIOCFeed: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('netwatch_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE_URL}/api/iocs/upload`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    return await handleResponse(res);
+  },
+
+  getIPReputation: async (ip: string): Promise<IPReputation> => {
+    const res = await fetch(`${BASE_URL}/api/ip/${ip}/reputation`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getIPGeolocation: async (ip: string): Promise<IPGeolocation> => {
+    const res = await fetch(`${BASE_URL}/api/ip/${ip}/geolocation`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  // Enterprise Cycle 2: UEBA & Behavioral Analytics
+  getUEBAStatus: async (): Promise<UEBAStatus> => {
+    const res = await fetch(`${BASE_URL}/api/ueba/status`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getAnalyticsStats: async (): Promise<AnalyticsStats> => {
+    const res = await fetch(`${BASE_URL}/api/ueba/stats`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  triggerAnalyticsCycle: async (): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/ueba/trigger-cycle`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
+    });
+    return await handleResponse(res);
+  },
+
+  getEntities: async (minRisk?: number, baselineStatus?: string, limit: number = 100): Promise<Entity[]> => {
+    const params = new URLSearchParams();
+    if (minRisk !== undefined) params.append('min_risk', minRisk.toString());
+    if (baselineStatus) params.append('baseline_status', baselineStatus);
+    params.append('limit', limit.toString());
+
+    const res = await fetch(`${BASE_URL}/api/entities?${params.toString()}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getEntityById: async (entityId: string): Promise<Entity> => {
+    const res = await fetch(`${BASE_URL}/api/entities/${entityId}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getEntityRiskHistory: async (entityId: string): Promise<EntityRiskHistory[]> => {
+    const res = await fetch(`${BASE_URL}/api/entities/${entityId}/risk-history`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getEntityBaselines: async (entityId: string): Promise<BehaviorBaseline[]> => {
+    const res = await fetch(`${BASE_URL}/api/entities/${entityId}/baselines`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getPeerGroupAnalysis: async (entityId: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/entities/${entityId}/peer-group`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getEntityAnomalies: async (entityId: string): Promise<Anomaly[]> => {
+    const res = await fetch(`${BASE_URL}/api/entities/${entityId}/anomalies`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getAnomalies: async (severity?: string, entityId?: string, minScore?: number, limit: number = 100): Promise<Anomaly[]> => {
+    const params = new URLSearchParams();
+    if (severity) params.append('severity', severity);
+    if (entityId) params.append('entity_id', entityId);
+    if (minScore !== undefined) params.append('min_score', minScore.toString());
+    params.append('limit', limit.toString());
+
+    const res = await fetch(`${BASE_URL}/api/anomalies?${params.toString()}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getAnomalyById: async (anomalyId: number): Promise<Anomaly> => {
+    const res = await fetch(`${BASE_URL}/api/anomalies/${anomalyId}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getCampaigns: async (status?: string, limit: number = 50): Promise<Campaign[]> => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    params.append('limit', limit.toString());
+
+    const res = await fetch(`${BASE_URL}/api/campaigns?${params.toString()}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getCampaignById: async (campaignId: string): Promise<Campaign> => {
+    const res = await fetch(`${BASE_URL}/api/campaigns/${campaignId}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getCampaignEvents: async (campaignId: string): Promise<CampaignEventDetails> => {
+    const res = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/events`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  triggerCampaignClustering: async (): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/campaigns/trigger-cluster`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  // Enterprise Cycle 3: Sigma Engine & Sandbox API
+  getSigmaRules: async (search?: string, status?: string, level?: string): Promise<SigmaRule[]> => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status) params.append('status', status);
+    if (level) params.append('level', level);
+
+    const res = await fetch(`${BASE_URL}/api/sigma/rules?${params.toString()}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getSigmaRuleById: async (ruleId: string): Promise<SigmaRule> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/rules/${ruleId}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  importSigmaRules: async (raw_yaml: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/rules/import`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ raw_yaml }),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  enableSigmaRule: async (ruleId: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/rules/${ruleId}/enable`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  disableSigmaRule: async (ruleId: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/rules/${ruleId}/disable`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  deleteSigmaRule: async (ruleId: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/rules/${ruleId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  validateSigmaYaml: async (raw_yaml: string): Promise<SigmaValidationResult> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/validate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ raw_yaml }),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  runSigmaSandbox: async (data: { raw_yaml?: string; rule_id?: string; hours?: number; log_source?: string }): Promise<SigmaSandboxResult> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/sandbox/test`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout(5000)
+    });
+    return await handleResponse(res);
+  },
+
+  getSigmaStatistics: async (): Promise<SigmaStatistics> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/statistics`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getSigmaFieldMappings: async (): Promise<SigmaFieldMapping[]> => {
+    const res = await fetch(`${BASE_URL}/api/sigma/mappings`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  // SOAR Subsystem Endpoints
+  getSoarPlaybooks: async (): Promise<SoarPlaybook[]> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  createSoarPlaybook: async (data: any): Promise<SoarPlaybook> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  updateSoarPlaybook: async (playbook_id: string, data: any): Promise<SoarPlaybook> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks/${playbook_id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  deleteSoarPlaybook: async (playbook_id: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks/${playbook_id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  enableSoarPlaybook: async (playbook_id: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks/${playbook_id}/enable`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  disableSoarPlaybook: async (playbook_id: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks/${playbook_id}/disable`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  dryRunSoarPlaybook: async (playbook_id: string, context: any): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks/${playbook_id}/dry-run`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(context),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  executeSoarPlaybook: async (playbook_id: string, context: any): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/soar/playbooks/${playbook_id}/execute`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(context),
+      signal: AbortSignal.timeout(5000)
+    });
+    return await handleResponse(res);
+  },
+
+  getSoarActions: async (status?: string, action_type?: string): Promise<SoarAction[]> => {
+    let url = `${BASE_URL}/api/soar/actions?`;
+    if (status) url += `status=${status}&`;
+    if (action_type) url += `action_type=${action_type}&`;
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  requestSoarAction: async (data: { action_type: string; target: str; alert_id?: number; case_id?: string; parameters?: any; dry_run?: boolean }): Promise<SoarAction> => {
+    const res = await fetch(`${BASE_URL}/api/soar/actions`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  getSoarApprovals: async (status: string = 'PENDING'): Promise<SoarApproval[]> => {
+    const res = await fetch(`${BASE_URL}/api/soar/approvals?status=${status}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  decideSoarApproval: async (approval_id: string, decision: string, reason?: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/soar/approvals/${approval_id}/decide`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ decision, reason }),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  rollbackSoarAction: async (action_id: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/soar/actions/${action_id}/rollback`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  getSoarIntegrations: async (): Promise<Record<string, string>> => {
+    const res = await fetch(`${BASE_URL}/api/soar/integrations`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
+  },
+
+  getSoarStatistics: async (): Promise<SoarStatistics> => {
+    const res = await fetch(`${BASE_URL}/api/soar/statistics`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(2000)
+    });
+    return await handleResponse(res);
   }
 };

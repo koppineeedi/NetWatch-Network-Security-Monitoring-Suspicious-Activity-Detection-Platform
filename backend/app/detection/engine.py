@@ -12,6 +12,7 @@ from app.detection.rules import DEFAULT_RULES, RuleEvaluator
 from app.detection.correlator import EventCorrelator
 from app.detection.risk import RiskCalculator
 from app.realtime.publisher import publish_detection, publish_alert
+from app.threat_intelligence.services.ioc_matcher import ioc_matcher_service
 
 def seed_default_rules(db: Session):
     """
@@ -35,12 +36,22 @@ def seed_default_rules(db: Session):
 
 def evaluate_event(db: Session, event: NetworkEvent) -> List[Detection]:
     """
-    Evaluates an ingested NetworkEvent against all enabled detection rules in DB.
-    Generates evidence-backed Detections and Alerts with deduplication logic.
-    Publishes new Detections & Alerts in real time to connected WebSocket clients.
+    Evaluates an ingested NetworkEvent against all enabled detection rules in DB,
+    runs Threat Intelligence IOC matching, generates evidence-backed Detections and Alerts with deduplication,
+    and publishes real-time WebSocket notifications.
     """
     if not event or not event.source_ip:
         return []
+
+    # Run Threat Intelligence IOC matching
+    ioc_matches = ioc_matcher_service.match_event(db, event)
+
+    # Run Sigma Live Rule Evaluation
+    try:
+        from app.sigma.engine import evaluate_sigma_live
+        evaluate_sigma_live(db, event)
+    except Exception:
+        pass
 
     # Ensure rules are seeded
     seed_default_rules(db)
@@ -85,6 +96,11 @@ def evaluate_event(db: Session, event: NetworkEvent) -> List[Detection]:
                 correlation_factor=1.1 if len(correlated_events) > 10 else 1.0,
                 has_failed_states=res.get("has_failed_states", False)
             )
+
+            # Boost risk score if IOC matches exist
+            if ioc_matches:
+                risk_score = min(100.0, risk_score + 15.0)
+                risk_factors.append(f"Matched {len(ioc_matches)} Threat Intel IOC(s)")
 
             # Format Evidence JSON
             evidence_json = RiskCalculator.format_evidence(
@@ -153,6 +169,13 @@ def evaluate_event(db: Session, event: NetworkEvent) -> List[Detection]:
             # Real-Time WebSocket Publishing
             publish_detection(detection)
             publish_alert(alert)
+
+            # Trigger SOAR Playbook Engine
+            try:
+                from app.soar.manager import SoarManager
+                SoarManager.trigger_playbooks_for_alert(db, alert)
+            except Exception:
+                pass
 
     return created_detections
 

@@ -18,6 +18,17 @@ import { Reports } from './pages/Reports';
 import { TrainingSimulator } from './pages/TrainingSimulator';
 import { SystemSettings } from './pages/SystemSettings';
 import { UserManagement } from './pages/UserManagement';
+import { ThreatIntelDashboard } from './pages/ThreatIntelDashboard';
+import { IOCExplorer } from './pages/IOCExplorer';
+import { Connectors } from './pages/Connectors';
+import { UEBADashboard } from './pages/UEBADashboard';
+import { EntityExplorer } from './pages/EntityExplorer';
+import { Campaigns } from './pages/Campaigns';
+import { SigmaManager } from './pages/SigmaManager';
+import { SigmaSandbox } from './pages/SigmaSandbox';
+import { SOARDashboard } from './pages/SOARDashboard';
+import { PlaybookManager } from './pages/PlaybookManager';
+import { ActionHistory } from './pages/ActionHistory';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -90,6 +101,18 @@ export const App: React.FC = () => {
         return <NetworkEvents />;
       case '/alerts':
         return <Alerts />;
+      case '/ueba':
+        return <UEBADashboard />;
+      case '/entities':
+        return <EntityExplorer />;
+      case '/campaigns':
+        return <Campaigns />;
+      case '/threat-intel':
+        return <ThreatIntelDashboard />;
+      case '/iocs':
+        return <IOCExplorer />;
+      case '/connectors':
+        return <Connectors />;
       case '/investigations':
         return <Investigations currentUser={currentUser.username} />;
       case '/logs':
@@ -98,6 +121,16 @@ export const App: React.FC = () => {
         return <IPAnalysis />;
       case '/rules':
         return <DetectionRules userRole={currentUser.role} />;
+      case '/sigma':
+        return <SigmaManager onNavigate={setCurrentPath} />;
+      case '/sigma/sandbox':
+        return <SigmaSandbox />;
+      case '/soar':
+        return <SOARDashboard onNavigate={setCurrentPath} />;
+      case '/soar/playbooks':
+        return <PlaybookManager />;
+      case '/soar/actions':
+        return <ActionHistory />;
       case '/assets':
         return <Assets />;
       case '/reports':

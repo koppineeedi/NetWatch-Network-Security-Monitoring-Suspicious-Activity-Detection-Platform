@@ -17,9 +17,12 @@ Base = declarative_base()
 
 def apply_schema_migrations():
     """
-    Ensures lightweight SQLite database schema is safely upgraded when new models/fields are added.
+    Ensures database schema is safely upgraded when new models/fields are added.
     """
     try:
+        # Create all tables defined in ORM metadata
+        Base.metadata.create_all(bind=engine)
+
         inspector = inspect(engine)
         tables = inspector.get_table_names()
 

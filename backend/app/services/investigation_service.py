@@ -203,7 +203,39 @@ class InvestigationService:
                         "details": f"Protocol: {evt.protocol} | State: {evt.connection_state} | Process: {evt.process_name or 'N/A'}"
                     })
 
-        # 3. Analyst Notes timeline
+        # 3. Threat Intelligence enrichment timeline entries
+        from app.models.threat_intel import IOCMatch, IPReputationCache
+        ti_matches = []
+        if inv.alert_id:
+            ti_matches = db.query(IOCMatch).filter(IOCMatch.alert_id == inv.alert_id).all()
+
+        if not ti_matches:
+            ips = [ip for ip in [inv.dest_ip, inv.source_ip] if ip and ip != "UNKNOWN"]
+            if ips:
+                ti_matches = db.query(IOCMatch).filter(IOCMatch.ioc_value.in_(ips)).all()
+
+        for m in ti_matches:
+            timeline.append({
+                "timestamp": m.timestamp.isoformat(),
+                "event_type": "IOC_MATCHED",
+                "actor": f"Threat Intel ({m.provider})",
+                "title": f"IOC matched: {m.ioc_value} ({m.ioc_type})",
+                "details": f"Threat intelligence confidence: {m.confidence} | Severity: {m.severity} | Tags: {m.tags or 'None'}"
+            })
+
+        target_ips = [ip for ip in [inv.dest_ip, inv.source_ip] if ip and ip != "UNKNOWN"]
+        for ip_addr in target_ips:
+            rep = db.query(IPReputationCache).filter(IPReputationCache.ip_address == ip_addr).first()
+            if rep:
+                timeline.append({
+                    "timestamp": rep.lookup_timestamp.isoformat(),
+                    "event_type": "IP_ENRICHED",
+                    "actor": f"Reputation Provider ({rep.provider})",
+                    "title": f"IP Enriched: {rep.ip_address}",
+                    "details": f"Country: {rep.country or 'N/A'} | ASN: {rep.asn or 'N/A'} | Abuse Confidence: {rep.abuse_confidence}%"
+                })
+
+        # 4. Analyst Notes timeline
         for note in inv.notes:
             timeline.append({
                 "timestamp": note.timestamp.isoformat(),
@@ -213,7 +245,7 @@ class InvestigationService:
                 "details": note.note_text
             })
 
-        # 4. Verdict & Resolution timeline
+        # 5. Verdict & Resolution timeline
         if inv.verdict:
             timeline.append({
                 "timestamp": inv.updated_at.isoformat(),
