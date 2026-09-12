@@ -4,7 +4,15 @@ import {
   UEBAStatus, AnalyticsStats, BehaviorBaseline, Entity, EntityRiskHistory, Anomaly, Campaign, CampaignEventDetails
 } from '../types';
 
-const BASE_URL = 'http://127.0.0.1:8000';
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname || '127.0.0.1';
+    return `${window.location.protocol}//${host}:8000`;
+  }
+  return 'http://127.0.0.1:8000';
+};
+
+const BASE_URL = getBaseUrl();
 
 export interface TelemetryStatus {
   running: boolean;
@@ -91,7 +99,7 @@ export const apiService = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: identifier, password }),
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(10000)
     });
     if (res.ok) {
       const data = await res.json();
@@ -108,7 +116,7 @@ export const apiService = {
       await fetch(`${BASE_URL}/api/auth/logout`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+        signal: AbortSignal.timeout(5000)
       });
     } catch {}
     localStorage.removeItem('netwatch_token');
@@ -118,7 +126,7 @@ export const apiService = {
   getMe: async (): Promise<User> => {
     const res = await fetch(`${BASE_URL}/api/auth/me`, {
       headers: getAuthHeaders(),
-      signal: AbortSignal.timeout(2000)
+      signal: AbortSignal.timeout(5000)
     });
     return await handleResponse(res);
   },
@@ -128,7 +136,7 @@ export const apiService = {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-      signal: AbortSignal.timeout(2000)
+      signal: AbortSignal.timeout(5000)
     });
     return await handleResponse(res);
   },
