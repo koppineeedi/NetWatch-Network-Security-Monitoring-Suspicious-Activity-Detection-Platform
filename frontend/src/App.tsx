@@ -29,6 +29,9 @@ import { SigmaSandbox } from './pages/SigmaSandbox';
 import { SOARDashboard } from './pages/SOARDashboard';
 import { PlaybookManager } from './pages/PlaybookManager';
 import { ActionHistory } from './pages/ActionHistory';
+import { ThreatHunting } from './pages/ThreatHunting';
+import { MitreCoverage } from './pages/MitreCoverage';
+import { AuditLogs } from './pages/AuditLogs';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -101,6 +104,12 @@ export const App: React.FC = () => {
         return <NetworkEvents />;
       case '/alerts':
         return <Alerts />;
+      case '/hunting':
+        return <ThreatHunting />;
+      case '/mitre':
+        return <MitreCoverage />;
+      case '/audit-logs':
+        return <AuditLogs />;
       case '/ueba':
         return <UEBADashboard />;
       case '/entities':

@@ -151,6 +151,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
       </div>
 
+      {/* SOC Demo Scenario Launcher Widget */}
+      <div className="p-4 bg-[#0b0f19] border border-cyan-500/30 rounded-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider flex items-center space-x-2">
+            <Play className="w-4 h-4 text-cyan-400" />
+            <span>SOC Analyst Defensive Lab Scenario Launcher</span>
+          </span>
+          <span className="text-[11px] text-slate-400 font-mono">Generates safe defensive telemetry into live pipeline</span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          {[
+            { id: 'ssh_brute_force', name: 'SSH Brute Force', mitre: 'T1110', color: 'hover:border-rose-500/60' },
+            { id: 'suspicious_login', name: 'Suspicious Login', mitre: 'T1078', color: 'hover:border-amber-500/60' },
+            { id: 'c2_beacon', name: 'C2 Beaconing', mitre: 'T1071', color: 'hover:border-purple-500/60' },
+            { id: 'port_scan', name: 'Port Scanning', mitre: 'T1046', color: 'hover:border-cyan-500/60' },
+            { id: 'dns_anomaly', name: 'DNS Tunnel Anomaly', mitre: 'T1071.004', color: 'hover:border-emerald-500/60' }
+          ].map((sc) => (
+            <button
+              key={sc.id}
+              onClick={async () => {
+                try {
+                  await apiService.triggerDemoScenario(sc.id);
+                  await fetchRealData();
+                } catch (err: any) {
+                  alert(`Demo scenario failed: ${err.message}`);
+                }
+              }}
+              className={`p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-left font-mono transition text-slate-200 ${sc.color}`}
+            >
+              <div className="text-[11px] font-bold text-slate-200 truncate">{sc.name}</div>
+              <div className="text-[10px] text-cyan-400 font-semibold">{sc.mitre}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 4 Real KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard

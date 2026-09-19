@@ -25,3 +25,14 @@ class AuditService:
         db.add(entry)
         db.commit()
         return entry
+
+def log_audit_event(
+    db: Session,
+    user: str,
+    action: str,
+    resource_type: str,
+    resource_id: str,
+    details: str = None,
+    result: str = "SUCCESS"
+) -> AuditLog:
+    return AuditService.log(db, user, action, resource_type, resource_id, result, details)

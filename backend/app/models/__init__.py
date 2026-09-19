@@ -13,6 +13,8 @@ from app.analytics.models import BehaviorBaseline, Entity, EntityRiskHistory, An
 from app.sigma.models import SigmaRule, SigmaRuleVersion, SigmaRuleExecution, SigmaRuleMatch, SigmaFieldMapping
 from app.soar.models import SoarPlaybook, SoarPlaybookVersion, SoarPlaybookExecution, SoarAction, SoarApproval, SoarIntegration, SoarActionResult
 
+from app.models.soc_models import IncidentEvidence, ThreatHuntReport
+
 __all__ = [
     "NetworkEvent",
     "Alert",
@@ -47,5 +49,7 @@ __all__ = [
     "SoarAction",
     "SoarApproval",
     "SoarIntegration",
-    "SoarActionResult"
+    "SoarActionResult",
+    "IncidentEvidence",
+    "ThreatHuntReport"
 ]

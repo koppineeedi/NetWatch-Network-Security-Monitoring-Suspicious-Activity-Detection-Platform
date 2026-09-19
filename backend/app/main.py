@@ -36,12 +36,13 @@ app = FastAPI(
 )
 
 # Configurable CORS middleware for production deployment
-cors_origins_raw = os.getenv("NETWATCH_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000")
+cors_origins_raw = os.getenv("NETWATCH_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001")
 cors_origins = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if cors_origins else ["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=cors_origins,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,6 +88,17 @@ app.include_router(sigma_router)
 # Enterprise Cycle 4 Routers (SOAR Subsystem)
 from app.api.soar import router as soar_router
 app.include_router(soar_router)
+
+# Defensive SOC Upgrades (Hunting, MITRE ATT&CK, Replay, Evidence)
+from app.api.hunting import router as hunting_router
+from app.api.mitre import router as mitre_router
+from app.api.replay import router as replay_router
+from app.api.evidence import router as evidence_router
+
+app.include_router(hunting_router)
+app.include_router(mitre_router)
+app.include_router(replay_router)
+app.include_router(evidence_router)
 
 @app.on_event("startup")
 def startup_event():

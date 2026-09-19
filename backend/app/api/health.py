@@ -7,7 +7,7 @@ from sqlalchemy import text
 from app.database.connection import get_db
 from app.collectors.local_network import local_collector_instance
 from app.collectors.syslog_collector import syslog_collector_instance
-from app.realtime.connection_manager import connection_manager
+from app.realtime.manager import ws_manager
 
 router = APIRouter(tags=["health"])
 

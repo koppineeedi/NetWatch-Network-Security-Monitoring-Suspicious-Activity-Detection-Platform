@@ -1016,5 +1016,105 @@ export const apiService = {
       signal: AbortSignal.timeout(2000)
     });
     return await handleResponse(res);
+  },
+
+  // Threat Hunting & SOC Upgrade Endpoints
+  executeThreatHuntQuery: async (params: Record<string, any>): Promise<any> => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, String(v));
+    });
+    const res = await fetch(`${BASE_URL}/api/hunting/query?${query.toString()}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
+    });
+    return await handleResponse(res);
+  },
+
+  getThreatHuntReports: async (): Promise<any[]> => {
+    const res = await fetch(`${BASE_URL}/api/hunting/reports`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  createThreatHuntReport: async (payload: Record<string, any>): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/hunting/reports`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  getMitreCoverage: async (): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/mitre/coverage`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  replayDetectionRule: async (payload: Record<string, any>): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/detection/replay`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000)
+    });
+    return await handleResponse(res);
+  },
+
+  getInvestigationEvidence: async (investigationId: number): Promise<any[]> => {
+    const res = await fetch(`${BASE_URL}/api/investigations/${investigationId}/evidence`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  attachInvestigationEvidence: async (investigationId: number, payload: Record<string, any>): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/investigations/${investigationId}/evidence`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  detachInvestigationEvidence: async (investigationId: number, evidenceId: number): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/investigations/${investigationId}/evidence/${evidenceId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  getAuditLogs: async (params?: Record<string, any>): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') query.append(k, String(v));
+      });
+    }
+    const res = await fetch(`${BASE_URL}/api/audit?${query.toString()}`, {
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(3000)
+    });
+    return await handleResponse(res);
+  },
+
+  triggerDemoScenario: async (scenarioType: string): Promise<any> => {
+    const res = await fetch(`${BASE_URL}/api/telemetry/demo-scenario`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ scenario_type: scenarioType }),
+      signal: AbortSignal.timeout(5000)
+    });
+    return await handleResponse(res);
   }
 };

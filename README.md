@@ -1,18 +1,18 @@
-# NetWatch — Enterprise Defensive SIEM, UEBA, Sigma & SOAR Platform
+# NetWatch — Defensive SOC, SIEM, UEBA & Network Security Monitoring Platform
 
-NetWatch is an authoritative, evidence-backed Defensive Security Information and Event Management (SIEM), User and Entity Behavior Analytics (UEBA), Sigma Detection Engine, and Security Orchestration, Automation, and Response (SOAR) Analyst Platform built with **FastAPI (Python)**, **SQLAlchemy**, **React (TypeScript)**, **Vite**, and **Tailwind CSS**.
+NetWatch is a defensive SOC, SIEM, UEBA, Threat Hunting, MITRE ATT&CK Mapping, Detection Replay, Incident Evidence, Audit Logging, and network security monitoring platform designed to ingest security telemetry, detect suspicious behavior, support threat hunting and incident investigation, map detections to MITRE ATT&CK, investigate indicators, and execute controlled response workflows built with **FastAPI (Python)**, **SQLAlchemy**, **React (TypeScript)**, **Vite**, and **Tailwind CSS**.
 
 ---
 
 ## Executive Summary & Core Capabilities
 
-NetWatch processes **REAL network telemetry and real log streams**. It does NOT generate fake alerts, synthetic mock data, or fabricated integration responses. Every alert, anomaly, threat intelligence hit, and automated response action is grounded in verified system data and deterministic mathematical logic.
+NetWatch processes **real network telemetry and real log streams**. It does NOT generate fake alerts, synthetic mock data, or fabricated integration responses. Every alert, anomaly, threat intelligence hit, threat hunt result, and automated response action is grounded in verified system data and deterministic mathematical logic.
 
 ### 1. Core Network Monitoring & Telemetry
 - **Passive Local Socket Telemetry**: Observes live system socket connections using `psutil` without artificial network probes or synthetic traffic.
 - **Log Ingestion Engine**: Structured parser accepting `.log`, `.txt`, `.json`, `.ndjson`, and `.csv` log files, normalizing fields into unified `NetworkEvent` records with path traversal and 10 MB file size safeguards.
 - **Defensive Detection Engine**: Evaluates events against configurable correlation windows, calculates evidence-backed risk scores (0–100), maps threats to MITRE ATT&CK tactics/techniques (`R-SCAN-01` through `R-DNS-01`), and deduplicates repeated alerts.
-- **SOC Workflow & Case Management**: Complete alert triage queue, investigation case management, analyst notes, event timeline tracking, verdicts (`TRUE_POSITIVE`, `FALSE_POSITIVE`), and audit logging.
+- **SOC Workflow & Case Management**: Complete alert triage queue, investigation case management, analyst notes, forensic evidence attachments, event timeline tracking, verdicts (`TRUE_POSITIVE`, `FALSE_POSITIVE`), and immutable audit logging.
 - **Security, Auth & RBAC**: OAuth2 Bearer JWT access tokens, salted `bcrypt` password security, and granular role enforcement (`ADMIN`, `ANALYST`, `VIEWER`). Active administrator self-protection rule blocks deleting the last active admin.
 - **Real-Time WebSocket Pipeline**: Authenticated WebSocket stream broadcasting telemetry, detections, alerts, anomalies, and SOAR events live to connected frontend SOC clients with 30s heartbeat.
 
@@ -41,6 +41,14 @@ NetWatch processes **REAL network telemetry and real log streams**. It does NOT 
 - **Pluggable IAM Account Driver**: Base identity driver supporting Active Directory / LDAP and Microsoft Entra ID interfaces (`NOT_CONFIGURED` default safeguard).
 - **Approval Workflow & Safety**: Authorization policies (`AUTOMATIC`, `ANALYST_APPROVAL`, `ADMIN_APPROVAL`, `MANUAL_ONLY`). Destructive actions require explicit authorization. Global Dry-Run simulation capability (`NETWATCH_SOAR_DRY_RUN=true`). Idempotency key tracking and reversible rollback engine (`BLOCK_IP` ↔ `UNBLOCK_IP`).
 
+### 6. Threat Hunting, MITRE ATT&CK & Detection Engineering
+- **Threat Hunting Query Engine**: Structured search across telemetry, logs, and alerts by time range, event category, severity, and custom key-value pairs (`/api/hunting/query`, `/api/hunting/reports`).
+- **MITRE ATT&CK Matrix & Coverage**: Interactive visual mapping of active detection rules across all 14 MITRE ATT&CK tactics, highlighting covered techniques and coverage gaps (`/api/mitre/coverage`).
+- **Detection Replay Sandbox**: Replay historical telemetry against new or modified detection logic to measure rule effectiveness and avoid false positives before deploying to production (`/api/detection/replay`).
+- **Incident Evidence Attachment**: Attach PCAP snippets, log extracts, and forensic artifacts directly to investigation cases (`/api/investigations/{id}/evidence`).
+- **Immutable Audit Logging**: Searchable and filterable system audit log tracking analyst actions, rule modifications, and SOAR execution events (`/api/audit`).
+- **1-Click Demo Scenario Launcher**: Instant launch of 5 realistic threat scenarios (Ransomware Outbreak, Pass-the-Hash, DNS Exfiltration, SSH Brute Force, Web Shell Backdoor) to demonstrate detection and triage workflows end-to-end (`/api/telemetry/demo-scenario`).
+
 ---
 
 ## Architecture Diagram
@@ -51,19 +59,21 @@ graph TD
     B[Log Files .log / .json / .csv] -->|File Collector| E
     C[Remote Syslog UDP/TCP 514] -->|Syslog Receiver| E
     D[Cloud Connectors AWS/Azure/GCP] -->|Connector API| E
+    DS[Demo Scenario Launcher] -->|Realistic Scenarios| E
 
     E --> F[Backend Detection Engine]
     E --> G[Threat Intelligence IOC Matcher]
     E --> H[UEBA Behavioral Engine]
     E --> I[Sigma Live Evaluator]
 
-    F --> J[SOC Alert Queue]
+    F --> J[SOC Alert Queue & Case Triage]
     G --> J
     H --> J
     I --> J
 
-    J --> K[Investigation & Case Management]
+    J --> K[Investigation & Evidence Attachment]
     J --> L[SOAR Response Engine]
+    J --> TH[Threat Hunting & MITRE Coverage]
 
     L -->|Approval Policy| M{Requires Approval?}
     M -->|Yes| N[Pending Approval Queue]
@@ -127,6 +137,7 @@ cd ..
 
 ### 4. Start Backend Server
 ```bash
+cd backend
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 - REST API Base URL: `http://localhost:8000`
@@ -140,17 +151,18 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Automated Test Suite & Production Build Verification
 
-Run the backend test suite:
+Run the backend test suite (50 passing tests):
 ```bash
-python -m pytest -q
-# Output: 42 passed in 12.49s
+cd backend
+python -m pytest tests/ -v
+# Output: 50 passed in 14.10s
 ```
 
 Run the production frontend build:
 ```bash
 cd frontend
 npx vite build
-# Output: ✓ 1507 modules transformed in 10.24s
+# Output: ✓ 1510 modules transformed
 ```
 
 Run the configuration check CLI:
@@ -188,8 +200,11 @@ python backend/app/scripts/config_check.py
 ## REST API Reference Overview
 
 - **Authentication & User Management:** `/api/auth/login`, `/api/users`
-- **Telemetry & Logs:** `/api/telemetry`, `/api/logs/ingest`, `/api/logs/upload`
-- **Alert Triage & Investigations:** `/api/alerts`, `/api/investigations`, `/api/rules`
+- **Telemetry, Logs & Demo Launcher:** `/api/telemetry`, `/api/logs/ingest`, `/api/logs/upload`, `/api/telemetry/demo-scenario`
+- **Alert Triage & Investigations:** `/api/alerts`, `/api/investigations`, `/api/investigations/{id}/evidence`, `/api/rules`
+- **Threat Hunting & MITRE Coverage:** `/api/hunting/query`, `/api/hunting/reports`, `/api/mitre/coverage`
+- **Detection Replay:** `/api/detection/replay`
+- **Audit Logs:** `/api/audit`
 - **Threat Intelligence & IOCs:** `/api/threat-intelligence/providers`, `/api/iocs`, `/api/ip/{ip}/reputation`
 - **Connectors:** `/api/connectors`, `/api/connectors/{id}/test`
 - **UEBA & Behavioral Analytics:** `/api/ueba/status`, `/api/entities`, `/api/anomalies`, `/api/campaigns`
@@ -197,6 +212,7 @@ python backend/app/scripts/config_check.py
 - **SOAR Subsystem:** `/api/soar/playbooks`, `/api/soar/actions/execute`, `/api/soar/approvals`, `/api/soar/integrations`
 - **Health & Readiness Probes:** `/health`, `/ready`, `/api/system/status`
 - **Real-Time WebSocket Stream:** `/ws/events`
+
 
 ---
 
