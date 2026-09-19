@@ -12,55 +12,89 @@ NetWatch processes **real network telemetry and real log streams**. It does NOT 
 
 ---
 
+## Platform Evolution (From Initial Scratch to Portfolio SOC)
+
+NetWatch evolved through structured, incremental engineering cycles from a raw network socket watcher into a full-scale Defensive SOC & SIEM platform:
+
+```
+[Phase 0: Base Collector] ──► [Phase 1: Syslog & Threat Intel] ──► [Phase 2: UEBA & Baselines]
+                                                                          │
+[Phase 5: Defensive SOC & Hunting] ◄── [Phase 4: SOAR & Safety] ◄── [Phase 3: Sigma Sandbox]
+```
+
+- **Phase 0 (Initial Base Collector)**: Passive local socket monitoring (`psutil`), basic `.log`/`.json`/`.csv` file ingestion, SQLite persistence, and core REST API authentication.
+- **Phase 1 (Enterprise Ingestion & Threat Intel)**: Non-blocking UDP/TCP Syslog receiver (Port 514), Cloud Connector API framework (AWS/Azure/GCP), and real-time IOC matching engine with AbuseIPDB, OTX, and MISP adapters.
+- **Phase 2 (UEBA & Behavioral Analytics)**: Statistical baselining over 168-hour historical windows, explainable z-score anomaly detection, 24-hour half-life entity risk decay, and multi-stage campaign correlation (`CMP-2026-XXXX`).
+- **Phase 3 (Sigma Engine & Sandbox)**: Production-grade PyYAML Sigma rule parser, standard field attribute mapping (`Image`, `CommandLine`, `User`), detection sandbox replay, and immutable rule versioning.
+- **Phase 4 (SOAR Subsystem & Response Safety)**: Multi-step playbook execution engine, real OS firewall manipulation (Windows `netsh` / Linux `iptables`), approval queues (`ANALYST_APPROVAL`, `ADMIN_APPROVAL`), global Dry-Run toggle (`NETWATCH_SOAR_DRY_RUN=true`), and atomic state rollback (`BLOCK_IP` ↔ `UNBLOCK_IP`).
+- **Phase 5 (Defensive SOC & Threat Hunting Platform)**: EQL-style Threat Hunting query builder (`/api/hunting/query`), MITRE ATT&CK 14-tactic visual heatmap (`/api/mitre/coverage`), forensic evidence attachment (`/api/investigations/{id}/evidence`), append-only SOC audit logging (`/api/audit`), and 1-click Demo Scenario launcher (5 controlled laboratory scenarios).
+
+---
+
+## Key Core Advantages & Technical Differentiators
+
+| Advantage | NetWatch Implementation | Traditional / Superficial Projects |
+| :--- | :--- | :--- |
+| **Data Authenticity** | Real socket telemetry (`psutil`) & real log file parsers with path traversal safeguards | Hardcoded mock arrays, fake static counters, or random telemetry generators |
+| **Explainable Risk Math** | Bounded (0–100) scoring with explicit point breakdowns (base severity + velocity + asset criticality + UEBA z-score) | Black-box opacity or arbitrary random numbers |
+| **Response Safety Model** | Multi-tiered approval gates, global Dry-Run toggles, loopback (`127.0.0.1`) protection, & atomic state rollbacks | Unchecked script execution that risks crashing production or locking out host access |
+| **Sigma Engine Integration** | Native PyYAML parser with condition evaluators (`selection`, `wildcards`, `regex`) and detection sandbox replay | Static text regex matching or unvalidated rules |
+| **Threat Hunting & MITRE** | EQL-style structured query builder and dynamic 14-tactic heatmap displaying active rule coverage depth | Static documentation without interactive query capabilities |
+| **Verification & Quality** | 50/50 passing backend pytest tests & production Vite build (`1510 modules transformed`) | Untested codebases or broken build scripts |
+
+---
+
+## Detailed 12-Step SOC Analyst Workflow
+
+NetWatch organizes analyst operations into a continuous, end-to-end defensive lifecycle:
+
+```
+TELEMETRY
+    ↓
+NORMALIZATION
+    ↓
+DETECTION
+    ↓
+ALERT
+    ↓
+TRIAGE
+    ↓
+INVESTIGATION
+    ↓
+THREAT HUNTING
+    ↓
+MITRE ATT&CK
+    ↓
+IOC ENRICHMENT
+    ↓
+CONTROLLED RESPONSE
+    ↓
+AUDIT
+    ↓
+INCIDENT REPORT
+```
+
+1. **Telemetry Ingestion**: Ingests live local socket telemetry, structured log files, remote Syslog feeds, or controlled lab demo scenarios.
+2. **Field Normalization**: Normalizes raw data into standardized `NetworkEvent` records containing timestamps, source/destination IPs/ports, protocol, user, process, and command line attributes.
+3. **Multi-Engine Detection**: Evaluates events concurrently across rule correlation windows, PyYAML Sigma rules, UEBA statistical baselines, and real-time IOC lists.
+4. **Alert Deduplication & Risk Calculation**: Aggregates repeated alerts within 300s sliding windows and calculates evidence-backed risk scores (0–100).
+5. **Alert Triage & Explainability**: Analysts inspect the triage queue (`/alerts`) and open the Alert Explainability Modal to review mathematical risk factors and rule metadata.
+6. **Investigation Case Creation**: Analysts convert critical alerts into formal investigation cases (`/investigations`), generating an initial timeline and assigning ownership.
+7. **Threat Hunting & Pivot Analysis**: Analysts execute structured EQL queries (`/hunting`) across raw telemetry to identify lateral movement or additional compromised hosts.
+8. **MITRE ATT&CK Matrix Mapping**: Detections map dynamically to the 14-tactic enterprise matrix (`/mitre`), highlighting technique coverage and gaps.
+9. **IOC Threat Intel Enrichment**: Evaluates IP reputations and domain indicators against AbuseIPDB, OTX, and MISP threat intelligence caches.
+10. **Controlled SOAR Response**: Triggers playbooks with Dry-Run validation (`NETWATCH_SOAR_DRY_RUN=true`) and approval gating for host isolation or firewall block rules.
+11. **Immutable Audit Logging**: System records an append-only audit entry (`/audit`) detailing actor identity, action name, timestamp, and payload diffs.
+12. **Incident Summary Report Export**: Analysts assign a final verdict (`TRUE_POSITIVE`, `FALSE_POSITIVE`), close the case, and export a formatted executive report.
+
+---
+
 ## Verified Portfolio Status
 
 - **Backend Automated Test Suite:** `50/50 PASSED` (`cd backend; python -m pytest tests/ -v`)
 - **Frontend Production Build:** `SUCCESSFUL` (`cd frontend; npx vite build`)
 - **API Specification:** Interactive Swagger docs at `http://localhost:8000/docs`
 - **Authentication & Security:** JWT OAuth2 Bearer Tokens, Bcrypt Hashing, RBAC Middleware (`ADMIN`, `ANALYST`, `VIEWER`), Last-Admin Protection.
-
----
-
-## Core Capabilities Overview
-
-### 1. Telemetry Ingestion & Normalization
-- **Passive Local Socket Telemetry**: Observes live system socket connections using `psutil` without artificial network probes or synthetic traffic.
-- **Log Ingestion Engine**: Structured parser accepting `.log`, `.txt`, `.json`, `.ndjson`, and `.csv` log files, normalizing fields into unified `NetworkEvent` records with path traversal and 10 MB file size safeguards.
-- **Syslog Receiver**: Non-blocking UDP/TCP Syslog listener on Port 514 supporting RFC 3164 and RFC 5424 formats.
-
-### 2. Defensive Detection & Rule Engine
-- **Correlation Engine**: Evaluates events over sliding time windows, calculates evidence-backed risk scores (0–100), and deduplicates repeated alerts using 300s window hashes.
-- **Sigma Rule Engine**: Imports PyYAML Sigma rules, validates syntax (`VALID`, `UNSUPPORTED`, `INVALID`), maps attributes (`src_ip`, `dst_ip`, `Image`, `CommandLine`, etc.), and evaluates logical conditions (`selection`, `wildcards`, `regex`).
-
-### 3. Threat Hunting & Query Engine
-- **Structured Search**: Query telemetry and alerts by time range, event category, severity, IP subnet, or custom key-value attributes (`/api/hunting/query`).
-- **Hunt Reports**: Save findings into formal Hunt Reports (`/api/hunting/reports`) or pivot directly into new Investigation cases.
-
-### 4. UEBA & Behavioral Anomaly Detection
-- **Statistical Baselines**: Calculates baselines over 168-hour windows across network, temporal, entity, and process dimensions (requires min 20 events, returns `INSUFFICIENT_DATA` if unmet).
-- **Explainable Anomaly Engine**: Computes deterministic z-scores and percentiles, returning mathematical explanations for every flagged anomaly.
-
-### 5. MITRE ATT&CK Matrix & Coverage
-- **Dynamic Matrix Visualizer**: Dynamic heatmap mapping active rules across all 14 MITRE ATT&CK tactics (`TA0001` to `TA0040`), highlighting technique coverage and detection gaps (`/api/mitre/coverage`).
-
-### 6. IOC & Threat Intelligence Framework
-- **Real-Time Matcher**: Evaluates IPv4, IPv6, domain, URL, MD5, SHA1, SHA256, and email IOCs against incoming telemetry.
-- **Provider Adapters**: Modular integration framework for AbuseIPDB, AlienVault OTX, MISP, and manual threat lists with sliding-window reputation caching.
-
-### 7. Investigation & Evidence Management
-- **Case Management**: Triage queue, analyst notes, verdict tracking (`TRUE_POSITIVE`, `FALSE_POSITIVE`), and interactive event timeline generation (`/api/investigations`).
-- **Forensic Evidence Attachments**: Attach log extracts, PCAP hashes, and raw payloads directly to cases (`/api/investigations/{id}/evidence`).
-
-### 8. Detection Replay Sandbox
-- **Historical Replay**: Replay raw historical telemetry against updated or experimental detection rules to measure performance and tune false positives (`/api/detection/replay`).
-
-### 9. SOAR Subsystem & Response Safety
-- **Playbook Engine**: Ordered, multi-step execution with retries, timeouts, and max loop depth safeguards (limit 5).
-- **Approval Gate & Safety**: Destructive actions require explicit human authorization (`ANALYST_APPROVAL` or `ADMIN_APPROVAL`). Protected loopback allowlist prevents self-lockouts.
-- **Dry-Run & Rollback**: Test actions safely (`NETWATCH_SOAR_DRY_RUN=true`) and perform reversible state rollbacks (`BLOCK_IP` ↔ `UNBLOCK_IP`).
-
-### 10. Immutable Audit Logging
-- **Append-Only Trail**: Complete, filterable audit log tracking analyst actions, rule modifications, case updates, and SOAR execution events (`/api/audit`).
 
 ---
 
@@ -110,36 +144,6 @@ graph TD
         J --> U[Immutable Audit Trail]
         J -->|Authenticated WebSocket| V[React Analyst Dashboard]
     end
-```
-
----
-
-## Complete SOC Analyst Workflow
-
-```
-TELEMETRY
-    ↓
-NORMALIZATION
-    ↓
-DETECTION
-    ↓
-ALERT
-    ↓
-TRIAGE
-    ↓
-INVESTIGATION
-    ↓
-THREAT HUNTING
-    ↓
-MITRE ATT&CK
-    ↓
-IOC ENRICHMENT
-    ↓
-CONTROLLED RESPONSE
-    ↓
-AUDIT
-    ↓
-INCIDENT REPORT
 ```
 
 ---
@@ -221,7 +225,7 @@ Run the complete backend test suite:
 ```bash
 cd backend
 python -m pytest tests/ -v
-# Output: 50 passed in 17.22s
+# Output: 50 passed in 22.96s
 ```
 
 Run the production frontend build:
@@ -230,23 +234,6 @@ cd frontend
 npx vite build
 # Output: ✓ 1510 modules transformed
 ```
-
----
-
-## Project Screenshots & UI Checklist
-
-Refer to [docs/SCREENSHOT_GUIDE.md](docs/SCREENSHOT_GUIDE.md) for full capturing instructions. Recommended screens:
-
-1. **Analyst Dashboard** (`/`)
-2. **Alert Triage Queue** (`/alerts`)
-3. **Alert Explainability Modal** (Modal View)
-4. **Threat Hunting Builder** (`/hunting`)
-5. **Investigation Case & Evidence** (`/investigations/{id}`)
-6. **MITRE ATT&CK Matrix** (`/mitre`)
-7. **Sigma Sandbox & Rules** (`/rules`)
-8. **SOAR Approvals & Dry-Run** (`/soar`)
-9. **Immutable Audit Logs** (`/audit`)
-10. **Incident Summary Report** (Export View)
 
 ---
 
