@@ -1,53 +1,66 @@
-# NetWatch — Defensive SOC, SIEM, UEBA & Network Security Monitoring Platform
+# NETWATCH — Enterprise Defensive SIEM, UEBA & SOAR Platform
 
-NetWatch is a defensive SOC, SIEM, UEBA, Threat Hunting, MITRE ATT&CK Mapping, Detection Replay, Incident Evidence, Audit Logging, and network security monitoring platform designed to ingest security telemetry, detect suspicious behavior, support threat hunting and incident investigation, map detections to MITRE ATT&CK, investigate indicators, and execute controlled response workflows built with **FastAPI (Python)**, **SQLAlchemy**, **React (TypeScript)**, **Vite**, and **Tailwind CSS**.
+NetWatch is an enterprise-oriented defensive SIEM, UEBA, Threat Hunting, MITRE ATT&CK Mapping, Detection Replay, Incident Evidence, Audit Logging, and automated incident response platform built with **FastAPI (Python)**, **SQLAlchemy**, **React (TypeScript)**, **Vite**, and **Tailwind CSS**.
 
 ---
 
-## Executive Summary & Core Capabilities
+## Executive Summary & Value Proposition
+
+> **NetWatch bridges live network telemetry and log streams with explainable rule detection, statistical behavioral baselining, threat hunting, and approval-gated automated response actions.**
 
 NetWatch processes **real network telemetry and real log streams**. It does NOT generate fake alerts, synthetic mock data, or fabricated integration responses. Every alert, anomaly, threat intelligence hit, threat hunt result, and automated response action is grounded in verified system data and deterministic mathematical logic.
 
-### 1. Core Network Monitoring & Telemetry
+---
+
+## Verified Portfolio Status
+
+- **Backend Automated Test Suite:** `50/50 PASSED` (`cd backend; python -m pytest tests/ -v`)
+- **Frontend Production Build:** `SUCCESSFUL` (`cd frontend; npx vite build`)
+- **API Specification:** Interactive Swagger docs at `http://localhost:8000/docs`
+- **Authentication & Security:** JWT OAuth2 Bearer Tokens, Bcrypt Hashing, RBAC Middleware (`ADMIN`, `ANALYST`, `VIEWER`), Last-Admin Protection.
+
+---
+
+## Core Capabilities Overview
+
+### 1. Telemetry Ingestion & Normalization
 - **Passive Local Socket Telemetry**: Observes live system socket connections using `psutil` without artificial network probes or synthetic traffic.
 - **Log Ingestion Engine**: Structured parser accepting `.log`, `.txt`, `.json`, `.ndjson`, and `.csv` log files, normalizing fields into unified `NetworkEvent` records with path traversal and 10 MB file size safeguards.
-- **Defensive Detection Engine**: Evaluates events against configurable correlation windows, calculates evidence-backed risk scores (0–100), maps threats to MITRE ATT&CK tactics/techniques (`R-SCAN-01` through `R-DNS-01`), and deduplicates repeated alerts.
-- **SOC Workflow & Case Management**: Complete alert triage queue, investigation case management, analyst notes, forensic evidence attachments, event timeline tracking, verdicts (`TRUE_POSITIVE`, `FALSE_POSITIVE`), and immutable audit logging.
-- **Security, Auth & RBAC**: OAuth2 Bearer JWT access tokens, salted `bcrypt` password security, and granular role enforcement (`ADMIN`, `ANALYST`, `VIEWER`). Active administrator self-protection rule blocks deleting the last active admin.
-- **Real-Time WebSocket Pipeline**: Authenticated WebSocket stream broadcasting telemetry, detections, alerts, anomalies, and SOAR events live to connected frontend SOC clients with 30s heartbeat.
+- **Syslog Receiver**: Non-blocking UDP/TCP Syslog listener on Port 514 supporting RFC 3164 and RFC 5424 formats.
 
-### 2. Enterprise Remote Ingestion & Threat Intelligence (Cycle 1)
-- **Remote Syslog Receiver**: Configurable, non-blocking UDP/TCP Syslog listener (Port 514) for network switches, firewalls, and Linux servers supporting RFC 3164 and RFC 5424 formats.
-- **Cloud Connectors Architecture**: Generic connector framework supporting AWS CloudTrail, Azure Activity Log, GCP Audit Logs, and Syslog feeds with connection testing and health diagnostics (`NOT_CONFIGURED` status when unconfigured).
-- **Threat Intelligence Framework**: Modular integrations for AbuseIPDB, AlienVault OTX, MISP, and manual threat lists with sliding-window IP reputation and geolocation caching.
-- **Real-Time IOC Engine**: Matches IPv4, IPv6, domain, URL, MD5, SHA1, SHA256, and email IOCs against incoming telemetry in real time.
+### 2. Defensive Detection & Rule Engine
+- **Correlation Engine**: Evaluates events over sliding time windows, calculates evidence-backed risk scores (0–100), and deduplicates repeated alerts using 300s window hashes.
+- **Sigma Rule Engine**: Imports PyYAML Sigma rules, validates syntax (`VALID`, `UNSUPPORTED`, `INVALID`), maps attributes (`src_ip`, `dst_ip`, `Image`, `CommandLine`, etc.), and evaluates logical conditions (`selection`, `wildcards`, `regex`).
 
-### 3. Advanced Detection, UEBA & Behavioral Analytics (Cycle 2)
-- **Behavioral Baseline Engine**: Statistical baselining over 168-hour historical windows (requiring minimum 20 observed events) across network, temporal, process, and entity dimensions. Returns `INSUFFICIENT_DATA` when event threshold is unmet.
-- **Explainable Anomaly Detection**: Deterministic z-score and percentile anomaly detection providing mathematical explanations for every anomaly without black-box machine learning.
-- **Entity Risk Scoring & Decay**: Bounded (0–100) persistent entity risk scoring with 24-hour half-life exponential decay and audit history (`entity_risk_history`).
-- **Peer-Group & Campaign Correlation Engine**: Subnet-based peer group analysis, multi-stage event sequence correlation (`R-CORR-01` to `03`), and automated campaign clustering (`CMP-2026-XXXX`).
+### 3. Threat Hunting & Query Engine
+- **Structured Search**: Query telemetry and alerts by time range, event category, severity, IP subnet, or custom key-value attributes (`/api/hunting/query`).
+- **Hunt Reports**: Save findings into formal Hunt Reports (`/api/hunting/reports`) or pivot directly into new Investigation cases.
 
-### 4. Sigma Rule Engine & Detection Sandbox (Cycle 3)
-- **Sigma Rule Importer & Validator**: Production-grade PyYAML parser supporting single and multi-document rules with structural validation (`VALID`, `UNSUPPORTED`, `INVALID`) and size limits.
-- **Sigma Field Mapper & Evaluator**: Maps standard Sigma attributes (`src_ip`, `dst_ip`, `Image`, `User`, `CommandLine`, `EventID`, etc.) to NetWatch events and evaluates complex conditions (`selection`, `1 of selection*`, `all of selection*`, `and`, `or`, `not`, wildcards, regex).
-- **Detection Sandbox**: Isolated testing environment evaluating rules against real historical telemetry and logs within custom timeframes.
-- **Rule Versioning**: Immutable version history recorded in `sigma_rule_versions` on every rule update.
+### 4. UEBA & Behavioral Anomaly Detection
+- **Statistical Baselines**: Calculates baselines over 168-hour windows across network, temporal, entity, and process dimensions (requires min 20 events, returns `INSUFFICIENT_DATA` if unmet).
+- **Explainable Anomaly Engine**: Computes deterministic z-scores and percentiles, returning mathematical explanations for every flagged anomaly.
 
-### 5. SOAR Subsystem & Pluggable Drivers (Cycle 4 & 4.6)
-- **SOAR Playbook Engine**: Versioned playbooks executed over ordered steps with deterministic condition evaluation, retries, timeouts, and loop depth limits (max depth 5).
-- **Real OS Integrations**: Platform detection executing real OS firewall rules (Windows `netsh advfirewall`, Linux `iptables`), process termination (`psutil` with protected PID safeguards), and notification channels.
-- **Pluggable Host Isolation Driver**: Base driver with `UnconfiguredHostIsolationDriver` fallback and `WindowsNetshHostIsolationDriver` requiring explicit Administrator privileges. Target loopback allowlist prevents host self-lockout.
-- **Pluggable IAM Account Driver**: Base identity driver supporting Active Directory / LDAP and Microsoft Entra ID interfaces (`NOT_CONFIGURED` default safeguard).
-- **Approval Workflow & Safety**: Authorization policies (`AUTOMATIC`, `ANALYST_APPROVAL`, `ADMIN_APPROVAL`, `MANUAL_ONLY`). Destructive actions require explicit authorization. Global Dry-Run simulation capability (`NETWATCH_SOAR_DRY_RUN=true`). Idempotency key tracking and reversible rollback engine (`BLOCK_IP` ↔ `UNBLOCK_IP`).
+### 5. MITRE ATT&CK Matrix & Coverage
+- **Dynamic Matrix Visualizer**: Dynamic heatmap mapping active rules across all 14 MITRE ATT&CK tactics (`TA0001` to `TA0040`), highlighting technique coverage and detection gaps (`/api/mitre/coverage`).
 
-### 6. Threat Hunting, MITRE ATT&CK & Detection Engineering
-- **Threat Hunting Query Engine**: Structured search across telemetry, logs, and alerts by time range, event category, severity, and custom key-value pairs (`/api/hunting/query`, `/api/hunting/reports`).
-- **MITRE ATT&CK Matrix & Coverage**: Interactive visual mapping of active detection rules across all 14 MITRE ATT&CK tactics, highlighting covered techniques and coverage gaps (`/api/mitre/coverage`).
-- **Detection Replay Sandbox**: Replay historical telemetry against new or modified detection logic to measure rule effectiveness and avoid false positives before deploying to production (`/api/detection/replay`).
-- **Incident Evidence Attachment**: Attach PCAP snippets, log extracts, and forensic artifacts directly to investigation cases (`/api/investigations/{id}/evidence`).
-- **Immutable Audit Logging**: Searchable and filterable system audit log tracking analyst actions, rule modifications, and SOAR execution events (`/api/audit`).
-- **1-Click Demo Scenario Launcher**: Instant launch of 5 realistic threat scenarios (Ransomware Outbreak, Pass-the-Hash, DNS Exfiltration, SSH Brute Force, Web Shell Backdoor) to demonstrate detection and triage workflows end-to-end (`/api/telemetry/demo-scenario`).
+### 6. IOC & Threat Intelligence Framework
+- **Real-Time Matcher**: Evaluates IPv4, IPv6, domain, URL, MD5, SHA1, SHA256, and email IOCs against incoming telemetry.
+- **Provider Adapters**: Modular integration framework for AbuseIPDB, AlienVault OTX, MISP, and manual threat lists with sliding-window reputation caching.
+
+### 7. Investigation & Evidence Management
+- **Case Management**: Triage queue, analyst notes, verdict tracking (`TRUE_POSITIVE`, `FALSE_POSITIVE`), and interactive event timeline generation (`/api/investigations`).
+- **Forensic Evidence Attachments**: Attach log extracts, PCAP hashes, and raw payloads directly to cases (`/api/investigations/{id}/evidence`).
+
+### 8. Detection Replay Sandbox
+- **Historical Replay**: Replay raw historical telemetry against updated or experimental detection rules to measure performance and tune false positives (`/api/detection/replay`).
+
+### 9. SOAR Subsystem & Response Safety
+- **Playbook Engine**: Ordered, multi-step execution with retries, timeouts, and max loop depth safeguards (limit 5).
+- **Approval Gate & Safety**: Destructive actions require explicit human authorization (`ANALYST_APPROVAL` or `ADMIN_APPROVAL`). Protected loopback allowlist prevents self-lockouts.
+- **Dry-Run & Rollback**: Test actions safely (`NETWATCH_SOAR_DRY_RUN=true`) and perform reversible state rollbacks (`BLOCK_IP` ↔ `UNBLOCK_IP`).
+
+### 10. Immutable Audit Logging
+- **Append-Only Trail**: Complete, filterable audit log tracking analyst actions, rule modifications, case updates, and SOAR execution events (`/api/audit`).
 
 ---
 
@@ -55,107 +68,160 @@ NetWatch processes **real network telemetry and real log streams**. It does NOT 
 
 ```mermaid
 graph TD
-    A[Real Telemetry / Local Sockets] -->|psutil| E[NetworkEvent Normalizer]
-    B[Log Files .log / .json / .csv] -->|File Collector| E
-    C[Remote Syslog UDP/TCP 514] -->|Syslog Receiver| E
-    D[Cloud Connectors AWS/Azure/GCP] -->|Connector API| E
-    DS[Demo Scenario Launcher] -->|Realistic Scenarios| E
+    subgraph Telemetry ["1. Telemetry Ingestion"]
+        A[Local Socket Collector / psutil] -->|NetworkEvent| E[Normalizer Parser]
+        B[Log File Parser .log/.json/.csv] -->|NetworkEvent| E
+        C[Remote Syslog UDP/TCP Port 514] -->|NetworkEvent| E
+        D[Cloud Connectors AWS/Azure/GCP] -->|NetworkEvent| E
+        DS[Demo Scenario Launcher] -->|Controlled Synthetic Telemetry| E
+    end
 
-    E --> F[Backend Detection Engine]
-    E --> G[Threat Intelligence IOC Matcher]
-    E --> H[UEBA Behavioral Engine]
-    E --> I[Sigma Live Evaluator]
+    subgraph Analytics ["2. Detection & Analytics"]
+        E --> F[Correlation Engine]
+        E --> G[PyYAML Sigma Evaluator]
+        E --> H[UEBA Baseline Engine]
+        E --> I[Real-Time IOC Matcher]
+    end
 
-    F --> J[SOC Alert Queue & Case Triage]
-    G --> J
-    H --> J
-    I --> J
+    subgraph Persistence ["3. Persistence Layer"]
+        F --> J[(Database SQLite / PostgreSQL)]
+        G --> J
+        H --> J
+        I --> J
+    end
 
-    J --> K[Investigation & Evidence Attachment]
-    J --> L[SOAR Response Engine]
-    J --> TH[Threat Hunting & MITRE Coverage]
+    subgraph Workflow ["4. SOC Analyst Workflow"]
+        J --> K[Alert Triage & Explainability]
+        K --> L[Threat Hunting Query Builder]
+        K --> M[Investigation & Evidence Case]
+        K --> N[MITRE ATT&CK Matrix]
+        K --> O[Detection Replay Sandbox]
+    end
 
-    L -->|Approval Policy| M{Requires Approval?}
-    M -->|Yes| N[Pending Approval Queue]
-    M -->|No / Approved| O[Pluggable Drivers: Firewall / Process / Isolation / IAM]
+    subgraph Response ["5. SOAR Safety Model"]
+        M --> P[SOAR Playbook Engine]
+        P --> Q{Approval Policy Check}
+        Q -->|Approved| R[OS Drivers: netsh / iptables / IAM]
+        Q -->|Requires Approval| S[Pending Approval Queue]
+        R --> T[Idempotency & Rollback Tracker]
+    end
 
-    E -->|WebSocket Broadcast| P[React SOC Analyst Dashboard]
-    J -->|WebSocket Broadcast| P
-    L -->|WebSocket Broadcast| P
+    subgraph Governance ["6. Governance & Real-Time Stream"]
+        J --> U[Immutable Audit Trail]
+        J -->|Authenticated WebSocket| V[React Analyst Dashboard]
+    end
 ```
 
 ---
 
-## Prerequisites & System Requirements
+## Complete SOC Analyst Workflow
 
-- **Operating System:** Windows Server 2019/2022 / Windows 11 AMD64 or Linux (Ubuntu 22.04 LTS / RHEL 9 / Debian 12)
-- **Python:** Python 3.10, 3.11, 3.12, 3.13, or 3.14
-- **Node.js & npm:** Node.js >= 18.0.0, npm >= 9.0.0
-- **Git:** Version >= 2.30
-- **Privileges:** Administrator privileges on Windows / `sudo` or `CAP_NET_BIND_SERVICE` on Linux (for Syslog UDP port 514 binding and firewall manipulation).
+```
+TELEMETRY
+    ↓
+NORMALIZATION
+    ↓
+DETECTION
+    ↓
+ALERT
+    ↓
+TRIAGE
+    ↓
+INVESTIGATION
+    ↓
+THREAT HUNTING
+    ↓
+MITRE ATT&CK
+    ↓
+IOC ENRICHMENT
+    ↓
+CONTROLLED RESPONSE
+    ↓
+AUDIT
+    ↓
+INCIDENT REPORT
+```
 
 ---
 
-## Quick Start & Installation
+## Controlled Laboratory Demo Scenarios
 
-### 1. Clone Repository & Setup Environment
-```bash
-git clone https://github.com/koppineeedi/NetWatch-Network-Security-Monitoring-Suspicious-Activity-Detection-Platform.git netwatch
-cd netwatch
+NetWatch includes 5 controlled, offline laboratory scenarios for demonstration and testing purposes. These scenarios stream synthetic telemetry into local memory/database without targeting external systems:
 
-# Create Python Virtual Environment
-python -m venv venv
+1. **`ssh_brute_force`** (Primary Demo): Rapid SSH authentication failures followed by successful intrusion on Port 22.
+2. **`suspicious_login`**: Off-hours authentication attempt from an anomalous geographic region.
+3. **`c2_beacon`**: Periodic outbound HTTP GET requests matching C2 beacon timing patterns.
+4. **`port_scan`**: Sequential TCP connection attempts across multiple ports on a single host.
+5. **`dns_anomaly`**: High-entropy DNS queries indicating potential covert tunnel or exfiltration.
 
-# Activate Virtual Environment (Windows PowerShell)
-.\venv\Scripts\Activate.ps1
-# Or Activate (Linux / macOS)
-source venv/bin/activate
+---
 
-# Install backend dependencies
-pip install -r backend/requirements.txt
+## Technology Stack
 
-# Create environment configuration file
-cp .env.example .env
-```
+- **Backend Framework:** Python 3.10+, FastAPI, Uvicorn
+- **Database & ORM:** SQLite / PostgreSQL, SQLAlchemy ORM
+- **Rule Engine & Validation:** PyYAML, Pydantic v2
+- **Frontend Framework:** React 18, TypeScript, Vite, Tailwind CSS
+- **Visualization:** Recharts, Lucide Icons
+- **Real-Time Communication:** WebSockets (`/ws/events`)
+- **Testing:** Pytest, pytest-asyncio, HTTPX
 
-### 2. Initialize Database & Create Admin Account
-```bash
-# Seed initial administrator user
-python -m backend.app.scripts.create_admin
+---
 
-# Run Production Configuration Validator
-python backend/app/scripts/config_check.py
-```
+## System Requirements & Installation
 
-### 3. Build & Run Frontend UI
-```bash
-cd frontend
-npm install
-npx vite build
-cd ..
-```
+### Prerequisites
+- Python 3.10+
+- Node.js >= 18.0.0, npm >= 9.0.0
+- Git
 
-### 4. Start Backend Server
-```bash
-cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+### Installation Steps
+
+1. **Clone Repository & Setup Virtual Environment**:
+   ```bash
+   git clone https://github.com/koppineeedi/NetWatch-Network-Security-Monitoring-Suspicious-Activity-Detection-Platform.git netwatch
+   cd netwatch
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1   # Windows PowerShell
+   # source venv/bin/activate    # Linux / macOS
+   pip install -r backend/requirements.txt
+   cp .env.example .env
+   ```
+
+2. **Initialize Database & Seed Admin Account**:
+   ```bash
+   python -m backend.app.scripts.create_admin
+   python backend/app/scripts/config_check.py
+   ```
+
+3. **Build & Test Frontend**:
+   ```bash
+   cd frontend
+   npm install
+   npx vite build
+   cd ..
+   ```
+
+4. **Start Backend API Server**:
+   ```bash
+   cd backend
+   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
 - REST API Base URL: `http://localhost:8000`
-- API Interactive Swagger Specs: `http://localhost:8000/docs`
+- Interactive Swagger Specs: `http://localhost:8000/docs`
 - Health Probe: `http://localhost:8000/health`
-- Readiness Probe: `http://localhost:8000/ready`
-- System Status API: `http://localhost:8000/api/system/status`
 - Frontend Development Server: `http://localhost:5173`
 
 ---
 
-## Automated Test Suite & Production Build Verification
+## Automated Test Verification
 
-Run the backend test suite (50 passing tests):
+Run the complete backend test suite:
 ```bash
 cd backend
 python -m pytest tests/ -v
-# Output: 50 passed in 14.10s
+# Output: 50 passed in 17.22s
 ```
 
 Run the production frontend build:
@@ -165,112 +231,50 @@ npx vite build
 # Output: ✓ 1510 modules transformed
 ```
 
-Run the configuration check CLI:
-```bash
-python backend/app/scripts/config_check.py
-```
+---
+
+## Project Screenshots & UI Checklist
+
+Refer to [docs/SCREENSHOT_GUIDE.md](docs/SCREENSHOT_GUIDE.md) for full capturing instructions. Recommended screens:
+
+1. **Analyst Dashboard** (`/`)
+2. **Alert Triage Queue** (`/alerts`)
+3. **Alert Explainability Modal** (Modal View)
+4. **Threat Hunting Builder** (`/hunting`)
+5. **Investigation Case & Evidence** (`/investigations/{id}`)
+6. **MITRE ATT&CK Matrix** (`/mitre`)
+7. **Sigma Sandbox & Rules** (`/rules`)
+8. **SOAR Approvals & Dry-Run** (`/soar`)
+9. **Immutable Audit Logs** (`/audit`)
+10. **Incident Summary Report** (Export View)
 
 ---
 
-## Environment Variables Reference
+## Technical Documentation & References
 
-| Variable | Description | Default | Integration Status |
-| :--- | :--- | :--- | :--- |
-| `DATABASE_URL` | SQLite / PostgreSQL connection URI | `sqlite:///./netwatch.db` | **REQUIRED** |
-| `NETWATCH_SECRET_KEY` | JWT signing secret key | *(Required in production)* | **REQUIRED** |
-| `NETWATCH_CORS_ORIGINS` | Allowed CORS origins (Comma-separated) | `http://localhost:5173,http://localhost:3000` | **REQUIRED** |
-| `NETWATCH_SYSLOG_ENABLED` | Remote Syslog listener status | `false` | **OPTIONAL** |
-| `NETWATCH_SYSLOG_HOST` | Syslog host bind address | `0.0.0.0` | **OPTIONAL** |
-| `NETWATCH_SYSLOG_UDP_PORT` | Syslog UDP port | `514` | **OPTIONAL** |
-| `NETWATCH_UEBA_ENABLED` | Enables UEBA & Behavioral Analytics | `true` | **CORE** |
-| `NETWATCH_SIGMA_ENABLED` | Enables Sigma Rule Engine & Sandbox | `true` | **CORE** |
-| `NETWATCH_SOAR_DRY_RUN` | Global Dry-Run Safety Toggle | `false` | **CORE** |
-| `NETWATCH_SOAR_MAX_ACTIONS_PER_MINUTE` | Rate Limit Window Cap | `20` | **CORE** |
-| `NETWATCH_SOAR_HOST_ISOLATION_DRIVER` | Host isolation driver (`none`, `windows_netsh`, `agent`) | `none` | **OPTIONAL DRIVER** |
-| `NETWATCH_IAM_DRIVER` | Identity provider driver (`none`, `ldap`, `entra_id`) | `none` | **OPTIONAL DRIVER** |
-| `ABUSEIPDB_API_KEY` | AbuseIPDB API Key | *(Unconfigured)* | **OPTIONAL SERVICE** |
-| `OTX_API_KEY` | AlienVault OTX API Key | *(Unconfigured)* | **OPTIONAL SERVICE** |
-| `MISP_URL` / `MISP_API_KEY` | MISP instance credentials | *(Unconfigured)* | **OPTIONAL SERVICE** |
-| `AWS_ACCESS_KEY_ID` / `SECRET` | AWS CloudTrail API credentials | *(Unconfigured)* | **OPTIONAL SERVICE** |
-| `AZURE_TENANT_ID` / `CLIENT_ID` | Azure Activity Log credentials | *(Unconfigured)* | **OPTIONAL SERVICE** |
-| `GOOGLE_APPLICATION_CREDENTIALS` | GCP Audit Log credentials | *(Unconfigured)* | **OPTIONAL SERVICE** |
-
----
-
-## REST API Reference Overview
-
-- **Authentication & User Management:** `/api/auth/login`, `/api/users`
-- **Telemetry, Logs & Demo Launcher:** `/api/telemetry`, `/api/logs/ingest`, `/api/logs/upload`, `/api/telemetry/demo-scenario`
-- **Alert Triage & Investigations:** `/api/alerts`, `/api/investigations`, `/api/investigations/{id}/evidence`, `/api/rules`
-- **Threat Hunting & MITRE Coverage:** `/api/hunting/query`, `/api/hunting/reports`, `/api/mitre/coverage`
-- **Detection Replay:** `/api/detection/replay`
-- **Audit Logs:** `/api/audit`
-- **Threat Intelligence & IOCs:** `/api/threat-intelligence/providers`, `/api/iocs`, `/api/ip/{ip}/reputation`
-- **Connectors:** `/api/connectors`, `/api/connectors/{id}/test`
-- **UEBA & Behavioral Analytics:** `/api/ueba/status`, `/api/entities`, `/api/anomalies`, `/api/campaigns`
-- **Sigma Engine & Sandbox:** `/api/sigma/rules`, `/api/sigma/rules/import`, `/api/sigma/sandbox/evaluate`
-- **SOAR Subsystem:** `/api/soar/playbooks`, `/api/soar/actions/execute`, `/api/soar/approvals`, `/api/soar/integrations`
-- **Health & Readiness Probes:** `/health`, `/ready`, `/api/system/status`
-- **Real-Time WebSocket Stream:** `/ws/events`
-
-
----
-
-## Comprehensive Technical Documentation
-
-Detailed architectural specifications, real environment audit results, and operational references are available in the `docs/` directory:
-
-### Production Audits & Release Reports
-- [v1.0 Final Production Release Report](docs/NETWATCH_V1_RELEASE_REPORT.md)
-- [Cycle 4.7 Final End-to-End Validation Report](docs/FINAL_PRODUCTION_VALIDATION.md)
-- [Cycle 4.6 Production Gap Closure Report](docs/PRODUCTION_GAP_CLOSURE.md)
-- [Cycle 4.5 Real Environment Audit Report](docs/REAL_ENVIRONMENT_AUDIT.md)
-
-### Deployment, Backup & Security
-- [Enterprise Production Deployment Guide](docs/DEPLOYMENT.md)
-- [Database Backup & Recovery Guide](docs/BACKUP_RECOVERY.md)
-- [Security Hardening Specification](docs/SECURITY_HARDENING.md)
-- [Production Pre-Flight Release Checklist](docs/RELEASE_CHECKLIST.md)
-
-### SOAR & Automation Subsystem (Cycle 4)
-- [SOAR Subsystem Architecture](docs/SOAR.md)
-- [SOAR Playbooks & Visual Builder](docs/SOAR_PLAYBOOKS.md)
-- [SOAR Action Framework & Real Integrations](docs/SOAR_ACTIONS.md)
-- [SOAR Approvals & Authorization Workflow](docs/SOAR_APPROVALS.md)
-- [SOAR Security Controls & Protection Safeguards](docs/SOAR_SECURITY.md)
-- [SOAR Operations Guide](docs/SOAR_OPERATIONS.md)
-
-### Sigma Rule Engine & Sandbox (Cycle 3)
-- [Sigma Subsystem Architecture](docs/SIGMA.md)
-- [Sigma Rule Import & Validation Specification](docs/SIGMA_RULE_IMPORT.md)
-- [Sigma Field Mapping Reference](docs/SIGMA_FIELD_MAPPING.md)
-- [Detection Sandbox Architecture](docs/SIGMA_SANDBOX.md)
-- [Sigma Engine Operations Guide](docs/SIGMA_OPERATIONS.md)
-
-### UEBA & Behavioral Analytics (Cycle 2)
-- [UEBA & Entity Model Specification](docs/UEBA.md)
-- [Behavioral Baseline Engine](docs/BEHAVIORAL_BASELINES.md)
-- [Explainable Anomaly Detection](docs/ANOMALY_DETECTION.md)
-- [Entity Risk Scoring & Decay](docs/ENTITY_RISK.md)
-- [Campaign Clustering & Correlation Engine](docs/CAMPAIGN_CORRELATION.md)
-
-### Remote Ingestion & Threat Intelligence (Cycle 1)
-- [Enterprise Cloud Connectors](docs/ENTERPRISE_CONNECTORS.md)
-- [Threat Intelligence Framework](docs/THREAT_INTELLIGENCE.md)
-- [Remote Syslog Ingestion Architecture](docs/SYSLOG_INGESTION.md)
-- [IOC Data Model & Import Specification](docs/IOC_MODEL.md)
-
-### Core System & Architecture
+- [3-Minute SOC Demo Presentation Script](docs/DEMO_SCRIPT.md)
+- [Technical Interview & Architecture Cheat Sheet](docs/INTERVIEW_GUIDE.md)
+- [Visual Screenshot Guide](docs/SCREENSHOT_GUIDE.md)
 - [System Architecture](docs/ARCHITECTURE.md)
-- [Authentication & RBAC Reference](docs/AUTHENTICATION_RBAC.md)
-- [Detection Engine Specification](docs/DETECTION_ENGINE.md)
-- [Real-Time WebSocket Architecture](docs/REALTIME_WEBSOCKET.md)
-- [SOC Alert & Investigation Workflow](docs/SOC_ALERT_INVESTIGATION.md)
-- [Local Network Telemetry Collector](docs/LOCAL_NETWORK_TELEMETRY.md)
-- [Real Log File Ingestion](docs/REAL_LOG_INGESTION.md)
+- [Threat Model Specification](THREAT_MODEL.md)
+- [Security Hardening Guide](docs/SECURITY_HARDENING.md)
+
+---
+
+## Known Limitations & Production Roadmap
+
+- **Database Storage:** Default SQLite storage is ideal for single-instance testing. Production deployments should use PostgreSQL with connection pooling.
+- **Horizontal Scaling:** High-volume multi-gigabit log ingestion requires replacing the in-process queue with Apache Kafka or RabbitMQ.
+- **External Connectors:** Cloud Connectors (AWS/Azure/GCP) and Threat Intelligence APIs default to `NOT_CONFIGURED` until active credentials are set in `.env`.
+
+---
+
+## Technical Portfolio & Interview Summary
+
+NetWatch was designed as a production-grade defensive security engineering project to demonstrate mastery in SIEM telemetry parsing, rule correlation, UEBA anomaly detection, threat hunting, dynamic MITRE ATT&CK mapping, SOAR safety model design, and REST/WebSocket API development. All 50 backend tests pass cleanly, and the frontend builds with zero errors.
 
 ---
 
 ## License & Defensive Operations Policy
 
-This software is designed strictly for defensive cybersecurity operations, security monitoring, threat detection, and authorized incident response. Unauthorized or malicious deployment against systems without explicit authorization is strictly prohibited.
+This software is strictly intended for defensive cybersecurity operations, security monitoring, threat detection, and authorized educational laboratory research.

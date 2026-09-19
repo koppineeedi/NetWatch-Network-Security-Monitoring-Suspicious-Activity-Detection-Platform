@@ -31,6 +31,54 @@ CASE RESOLUTION (Final Verdict & Auditor Sign-off)
 INCIDENT REPORT (Redacted Exportable Incident Summary)
 ```
 
+## System Architecture Diagram
+
+```mermaid
+graph TD
+    subgraph Ingestion ["Telemetry Ingestion"]
+        A[Local Socket Monitor / psutil] -->|NetworkEvent| E[Normalizer Parser]
+        B[Structured Log Collector .log/.json/.csv] -->|NetworkEvent| E
+        C[Syslog Listener UDP/TCP Port 514] -->|NetworkEvent| E
+        D[Cloud Connectors AWS/Azure/GCP] -->|NetworkEvent| E
+        DS[Demo Scenario Launcher] -->|Controlled Synthetic Telemetry| E
+    end
+
+    subgraph Detection ["Detection & Intelligence Engines"]
+        E --> F[Rule Correlation Engine]
+        E --> G[PyYAML Sigma Evaluator]
+        E --> H[UEBA Behavioral Baseline Engine]
+        E --> I[Real-Time IOC Matcher]
+    end
+
+    subgraph Storage ["Persistence & Data Layer"]
+        F --> J[(Database SQLite/PostgreSQL)]
+        G --> J
+        H --> J
+        I --> J
+    end
+
+    subgraph Analyst ["SOC Analyst Workflow & Case Management"]
+        J --> K[Alert Triage Queue & Explainability]
+        K --> L[Threat Hunting Query Builder]
+        K --> M[Investigation Case & Evidence]
+        K --> N[MITRE ATT&CK Dynamic Matrix]
+        K --> O[Detection Replay Sandbox]
+    end
+
+    subgraph Response ["SOAR & Response Safety Subsystem"]
+        M --> P[SOAR Playbook Execution]
+        P --> Q{Approval Policy Check}
+        Q -->|Approved / Automatic| R[OS Drivers: netsh / iptables / IAM]
+        Q -->|Approval Required| S[Pending Approval Queue]
+        R --> T[Idempotency & Rollback Tracker]
+    end
+
+    subgraph Governance ["Audit & Real-Time Pipeline"]
+        J --> U[Immutable Audit Logging]
+        J -->|Authenticated WebSockets| V[React Analyst Dashboard]
+    end
+```
+
 ## Component Architecture
 
 ```
